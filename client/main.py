@@ -34,6 +34,8 @@ class MyMainWindow(QMainWindow):
         self.btn_join.clicked.connect(self.onClickJoin);
         self.btn_check = self.findChild(QPushButton, "pushButton_check");
         self.btn_check.clicked.connect(self.onClickCheck);
+        self.btn_check2 = self.findChild(QPushButton, "pushButton_check_2");
+        self.btn_check2.clicked.connect(self.onClickCheck2);
         self.btn_export = self.findChild(QPushButton, "pushButton_export");
         self.btn_export.clicked.connect(self.onClickExport);
         self.list.setColumnCount(2)
@@ -43,16 +45,13 @@ class MyMainWindow(QMainWindow):
         self.list.setColumnWidth(1, 115)
         self.list.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.edit_input.setAcceptDrops(True)#支持拖入文件
-        self.url = "http://81.71.124.110:3000"
+        # self.url = "http://81.71.124.110:3000"
+        self.url = "http://localhost:3000"
         self.code = 'B62A495B9CCA0041FC77D13651E7CFBB'
         self.mobiles = None
         self.checkdData = None
         self.list.horizontalHeader().setStyleSheet(
             "QHeaderView::section{background-color:rgb(155, 194, 230);font:11pt '宋体';color: black;};")
-
-    def selectInfo(self):
-        QMessageBox.information(self, "Information", "程序当前版本为V3.11")
-        self.resultLabel.setText("Information")
 
     def updateTitle(self):
         self.list.setHorizontalHeaderLabels(['号码', '状态'])#'序号',
@@ -86,14 +85,27 @@ class MyMainWindow(QMainWindow):
 
     def onClickCheck(self):
         print(self.mobiles)
-        if self.mobiles:
-            self.enableControls(False)
+        if self.mobiles is None:
+            QMessageBox.information(self, "Information", "没有可检测的号码")
+            return 
+            
+        self.enableControls(False)
+
+        if self.mode == 1 and not self.tokens is None:
+            self.postLocal(self.mobiles, self.tokens)
+        else:
             url = self.url + '/tests'
             self.postCloud(url, self.mobiles)
-        # authorization = "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc"
-        # r = requests.post(url='https://swszxcx.35sz.net/api/v1/card-replacement/query?mobile=16237397451', data={},
-        #               headers={'Content-Type': 'application/json', "Authorization": authorization})
-        # print(r.text)
+
+    def onClickCheck2(self):
+        print(self.mobiles)
+        if self.mobiles is None:
+            QMessageBox.information(self, "Information", "没有可检测的号码")
+            return 
+            
+        self.enableControls(False)
+        url = self.url + '/tests/hanghai'
+        self.postCloud(url, self.mobiles)
 
     def onClickExport(self):
         if self.checkdData == None:
@@ -162,12 +174,53 @@ class MyMainWindow(QMainWindow):
         self.btn_export.setEnabled(enable)
 
     def postCloud(self, url, mobiles):
-        self.thread = Worker(self, url, mobiles)
-        self.thread.sinOut.connect(self.postCloudFinish)
-        self.thread.start()
+        self.tCloud = CloudThread(self, url, mobiles)
+        self.tCloud.sinOut.connect(self.postCloudFinish)
+        self.tCloud.sinStep.connect(self.postCloudFinishStep)
+        self.tCloud.start()
 
-    def postCloudFinish(self, res):
+    def postCloudFinish(self, res, start):
         print("-------postCloudFinish-------")
+        self.postCloudFinishStep(res, start)
+        self.enableControls(True)
+
+    def postCloudFinishStep(self, res, start):
+        print("-------postCloudFinishStep-------")
+        print(res)
+        count = self.list.rowCount()
+        if res['ret'] == 0:
+            retData = res['data']
+            self.checkdData = retData
+            for i in range(count):
+                if retData[i] and isinstance(retData[i]['status'], str):
+                    newItem = QTableWidgetItem(retData[i]['status'])
+                    newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+                    self.list.setItem(i+start, 1, newItem)
+                pass
+        elif res['msg']:
+            QMessageBox.information(self, "Information", res['msg'])
+        else:
+            QMessageBox.information(self, "Information", "登录失败")
+        pass
+
+    def postLocal(self, mobiles, tokens):
+        self.tLocal = LocalThread(self, mobiles, tokens)
+        self.tLocal.sinOut.connect(self.postLocalFinish)
+        self.tLocal.sinOne.connect(self.postLocalFinishOne)
+        self.tLocal.start()
+        pass
+
+    def postLocalFinishOne(self, res):
+        index = res['index']
+        status = res['status']
+        if isinstance(status, str):
+            newItem = QTableWidgetItem(status)
+            newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+            self.list.setItem(index, 1, newItem)
+        self.updateStatusBar()
+
+    def postLocalFinish(self, res):
+        print("-------postLocalFinish-------")
         print(res)
         count = self.list.rowCount()
         if res['ret'] == 0:
@@ -187,9 +240,6 @@ class MyMainWindow(QMainWindow):
         self.enableControls(True)
         pass
 
-    def postLocal(self):
-        pass
-
     def postAll(self):
         if self.mode == 1:
             print('=============>')
@@ -200,15 +250,83 @@ class MyMainWindow(QMainWindow):
                       headers={'Content-Type': 'application/json', "Authorization": authorization})
         print(r.text)
 
-class Worker(QThread):
-    sinOut = pyqtSignal(dict)
+class CloudThread(QThread):
+    sinOut = pyqtSignal(dict, int)
+    sinStep = pyqtSignal(dict, int)
 
-    def __init__(self, parent, url, mobiles):
-        super(Worker, self).__init__(parent)
+    def __init__(self, parent, url, mobiles, max=500):
+        super(CloudThread, self).__init__(parent)
         #设置工作状态与初始num数值
         self.working = True
         self.url = url
+        self.max = max
         self.mobiles = mobiles
+
+    def __del__(self):
+        #线程状态改变与线程终止
+        self.working = False
+        self.wait()
+
+    def split(self, start=0):
+        print('------split---start-', start)
+        mobiles = []
+        count = len(self.mobiles)
+        for i in range(self.max):
+            if i+start < count:
+                mobiles.append(self.mobiles[i+start])
+
+        print('------split----')
+        return mobiles
+
+    def run(self):
+        start = 0
+        count = len(self.mobiles)
+        finalRet = []
+        # while self.working:
+        while True:
+            mobiles = self.split(start)
+            ret = {"data": []}
+            try:
+                stringBody = {
+                    "mobiles": mobiles,
+                }
+                data = json.dumps(stringBody)
+                HEADERS = {
+                    "Content-Type": "application/json ;charset=utf-8 "
+                }
+                result = requests.post(url=self.url, data=data, headers=HEADERS)
+                ret = json.loads(result.text)
+            except Exception as err:
+                print(err)
+            finally:
+                print("-------finally-------")
+                print(ret)
+                print("-------finally-------")
+                if ret['data']:
+                    print("-------finally-------")
+                    for info in ret['data']:
+                        print("-------finally-------", info)
+                        finalRet.append(info)
+
+                if start + self.max < count:
+                    # self.sinStep.emit(ret, start)
+                    start = start+self.max
+                else:
+                    fRet = {"data": finalRet, "ret": 0}
+                    self.sinOut.emit(fRet, 0)
+                    self.working = False
+                    break
+
+class LocalThread(QThread):
+    sinOut = pyqtSignal(dict)
+    sinOne = pyqtSignal(dict)
+
+    def __init__(self, parent, mobiles, tokens):
+        super(LocalThread, self).__init__(parent)
+        #设置工作状态与初始num数值
+        self.working = True
+        self.mobiles = mobiles
+        self.tokens = tokens
 
     def __del__(self):
         #线程状态改变与线程终止
@@ -217,22 +335,21 @@ class Worker(QThread):
 
     def run(self):
         result = {"text": ""}
-        try:
-            stringBody = {
-                "mobiles": self.mobiles,
-            }
-            data = json.dumps(stringBody)
-            HEADERS = {
-                "Content-Type": "application/json ;charset=utf-8 "
-            }
-            result = requests.post(url=self.url, data=data, headers=HEADERS)
-        except Exception as err:
-            print(err);
-        finally:
-            print("-------finally-------")
-            print(result)
-            ret = json.loads(result.text)
-            self.sinOut.emit(ret)
+        tCount = len(self.tokens)
+        for index in range(len(self.mobiles)):
+            mobile = self.mobiles[index]
+            try:
+                authorization = self.tokens[index%tCount]#"BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc"
+                url = 'https://swszxcx.35sz.net/api/v1/card-replacement/query?mobile=%s' % mobile
+                r = requests.post(url=url, data={}, headers={'Content-Type': 'application/json', "Authorization": authorization})
+                print(r.text)
+            except Exception as err:
+                print(err);
+            finally:
+                print("-------finally-------")
+                print(result)
+                ret = json.loads(result.text)
+                self.sinOut.emit(ret)
 
 
 if __name__ == "__main__":

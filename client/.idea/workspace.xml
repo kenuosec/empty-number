@@ -2,11 +2,12 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="02d1d8cf-28fa-4477-b51c-fba9e6d9a60e" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/client.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/client.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../README.md" beforeDir="false" afterPath="$PROJECT_DIR$/../README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.ui" beforeDir="false" afterPath="$PROJECT_DIR$/main.ui" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../server/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/../server/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/../server/package.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../server/tests/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../server/tests/index.js" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -16,22 +17,17 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/client$EmptyNumber.coverage" NAME="EmptyNumber Coverage Results" MODIFIED="1611064709186" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/client$EmptyNumber.coverage" NAME="EmptyNumber Coverage Results" MODIFIED="1611081922640" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="191">
-              <caret line="177" column="9" lean-forward="true" selection-start-line="177" selection-start-column="9" selection-end-line="177" selection-end-column="9" />
+            <state relative-caret-position="201">
+              <caret line="26" column="31" lean-forward="true" selection-start-line="26" selection-start-column="31" selection-end-line="26" selection-end-column="31" />
               <folding>
                 <element signature="e#175#185#0" expanded="true" />
-                <element signature="e#448#1744#0" />
-                <element signature="e#2058#2643#0" />
-                <element signature="e#3459#4029#0" />
-                <element signature="e#3146#3893#0" />
-                <element signature="e#4808#5213#0" />
               </folding>
             </state>
           </provider>
@@ -88,6 +84,9 @@
       <find>postCloud</find>
       <find>Worker</find>
       <find>sinOut</find>
+      <find>d[</find>
+      <find>len</find>
+      <find>[]</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -108,8 +107,7 @@
     <auto-save>true</auto-save>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="537" />
-    <option name="y" value="1" />
+    <option name="x" value="630" />
     <option name="width" value="1421" />
     <option name="height" value="1056" />
   </component>
@@ -189,23 +187,24 @@
       <workItem from="1610951915845" duration="17967000" />
       <workItem from="1610981300202" duration="1428000" />
       <workItem from="1610982944362" duration="3105000" />
-      <workItem from="1611026980535" duration="24734000" />
+      <workItem from="1611026980535" duration="33602000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="47234000" />
+    <option name="totallyTimeSpent" value="56102000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="537" y="1" width="1421" height="1056" extended-state="0" />
+    <frame x="476" y="22" width="1421" height="1056" extended-state="0" />
+    <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.11829537" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.35032538" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.505423" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.21583514" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -259,15 +258,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="191">
-          <caret line="177" column="9" lean-forward="true" selection-start-line="177" selection-start-column="9" selection-end-line="177" selection-end-column="9" />
+        <state relative-caret-position="201">
+          <caret line="26" column="31" lean-forward="true" selection-start-line="26" selection-start-column="31" selection-end-line="26" selection-end-column="31" />
           <folding>
             <element signature="e#175#185#0" expanded="true" />
-            <element signature="e#448#1744#0" />
-            <element signature="e#2058#2643#0" />
-            <element signature="e#3459#4029#0" />
-            <element signature="e#3146#3893#0" />
-            <element signature="e#4808#5213#0" />
           </folding>
         </state>
       </provider>
