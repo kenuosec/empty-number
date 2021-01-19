@@ -48,7 +48,7 @@
                 </el-form-item>
             </el-form>
             <el-table id="outTable" :data="activeData" v-loading="loading" element-loading-text="拼命加载中">
-                <el-table-column prop="code" label="激活码" width="150"></el-table-column>
+                <el-table-column prop="code" label="激活码" width="200"></el-table-column>
                 <el-table-column prop="date" label="有效期" width="150"></el-table-column>
                 <!-- <el-table-column label="操作" width="120">
                     <template slot-scope="scope">
@@ -74,7 +74,7 @@
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">取 消</el-button>
-                <el-button type="primary" @click="createCode()">确 定</el-button>
+                <el-button type="primary" @click="createCode()">生 成</el-button>
             </div>
             </el-dialog>
         </div>
@@ -118,7 +118,8 @@ export default {
                 }
             },
             loading:false,
-            codeTips:"密码不可为空密码不可为空",
+            codeTips:"",
+            needFresh:false,
         };
     },
     methods: {
@@ -171,13 +172,18 @@ export default {
                 });
                 return
             }
-            let data = {token:this.token, expire:this.expireDate}
+            this.expireDate.setHours(23)
+            this.expireDate.setMinutes(59)
+            this.expireDate.setSeconds(59)
+            let data = {token:this.token, expire:this.expireDate.valueOf()}
             this.codeTips = ''
             this.$http.post("codes/create", data).then((res) => {
                 if (res && res.data && res.data.data) {
                     let code = res.data.data.code
                     let expire = res.data.data.expire
-                    this.codeTips = '生成成功，激活码:' + code + "; 到期时间:"+expire
+                    let date = new Date(expire)
+                    this.codeTips = '生成成功，激活码:' + code + "; 到期时间:"+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()
+                    this.needFresh = true
                 } else {
                     this.$message({
                         message: "数据错误",
@@ -191,7 +197,7 @@ export default {
         requestCodes() {
             this.$http.post("codes", {token:this.token}).then((res) => {
                  this.loading = false
-
+                console.log(res.data)
                 if (res && res.data && res.data.data instanceof Array) {
                     this.activeData = res.data.data
                 } else {
@@ -217,6 +223,16 @@ export default {
     -webkit-border-radius: 5px;
     -moz-border-radius: 5px;
     box-shadow: 0 0 25px palegreen;
+}
+.active-box {
+    border: 1px solid #dcdfe6;
+    width: 350px;
+    margin: 180px auto;
+    padding: 35px 35px 15px 35px;
+    border-radius: 5px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    box-shadow: 0 0 25px #7b00cd;
 }
 .login-title {
     text-align: center;

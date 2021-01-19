@@ -57,19 +57,41 @@ async function post(mobile, token) {
     }
 }
 
-async function postAll(mobiles) {
-    let arr = mobiles.split(',')
+async function post1(mobile, token) {
+    let url = `https://swszxcx.35sz.net/api/v1/card-replacement/query`
+    let params = {mobile}
+    let ret = await httpRequest(url, params, {}, token)
+    if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
+        return {mobile, status:"√"}
+    } else if (ret && ret.message == "机主状态异常") {
+        return {mobile, status:"√"}
+    } else if (ret && ret.message == "此号码不支持换卡") {
+        return {mobile, status:"未激活"}
+    } else if (ret && ret.message == "Too Many Attempts.") {
+        await delay(1000)
+        return {mobile, retry:true}
+    } else {
+        return {mobile, ret, token, status:"失败"}
+    }
+}
+
+async function postAll(mobiles, mode) {
     const tCount = tokens.length
     const interval = tCount * 50
     
     let data = []
     let retrys = []
-    for (let i in arr) {
-        let mobile = arr[i]
+    for (let i in mobiles) {
+        let mobile = mobiles[i]
         if (i % interval== 0 && i > 0) await delay(5000)
         
         const token = tokens[i%tCount]
-        let ret = await post(mobile, token)
+        let ret
+        if (mode == 1)
+            ret = await post1(mobile, token)
+        else
+            ret = await post(mobile, token)
+
         if (typeof ret == "string") {
             console.log('--------00-------'+i)
             data[i] = ret
@@ -124,7 +146,8 @@ let tests = new Router();
 tests
 .get('/',async(ctx)=>{
     let mobiles = ctx.query.mobiles || '';//get
-    let data = await postAll(mobiles)
+    let arr = mobiles.split(',')
+    let data = await postAll(arr)
 
     ctx.body = {
         data,
@@ -132,8 +155,10 @@ tests
     };
 })
 .post('/',async(ctx)=>{
+    console.log('---------11111----------')
     let mobiles = ctx.request.body.mobiles || '';//post
-    let data = await postAll(mobiles)
+    console.log(mobiles)
+    let data = await postAll(mobiles, 1)
 
     ctx.body = {
         data,
@@ -154,7 +179,6 @@ tests
             ret:1,
             msg:"激活码或不存在或已过期",
         };
-
     }
 })
 
