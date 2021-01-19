@@ -113,7 +113,11 @@ async function postAll(mobiles, mode) {
         let index = retrys[i].index
         let mobile = retrys[i].mobile
         const token = tokens[i%tCount]
-        let ret = await post(mobile, token)
+        let ret
+        if (mode == 1)
+            ret = await post1(mobile, token)
+        else
+            ret = await post(mobile, token)
 
         if (typeof ret == "string") {
             data[index] = ret

@@ -17,7 +17,7 @@
    <widget class="QTableWidget" name="tableWidget">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>3</x>
       <y>0</y>
       <width>256</width>
       <height>461</height>
@@ -27,10 +27,10 @@
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>260</x>
+      <x>264</x>
       <y>10</y>
       <width>211</width>
-      <height>571</height>
+      <height>451</height>
      </rect>
     </property>
     <property name="title">
