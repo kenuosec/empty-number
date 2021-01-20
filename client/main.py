@@ -10,6 +10,7 @@ author: Jan Bodnar
 website: py40.com
 last edited: January 2015
 """
+import os
 import sys
 import json
 
@@ -18,10 +19,16 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 import requests
 from openpyxl import Workbook
-import _thread
+from openpyxl.styles import Alignment
+from active import ActiveDialog
+import time
 
 class MyMainWindow(QMainWindow):
-
+    mobiles = None
+    activeCode = None
+    activeState = False
+    hasFolder = False
+    productType = 0 #0是三五查询助手，1是海航查询助手
     def __init__(self, parent=None):
         super(MyMainWindow, self).__init__(parent)
         loadUi("main.ui", self)
@@ -34,10 +41,27 @@ class MyMainWindow(QMainWindow):
         self.btn_join.clicked.connect(self.onClickJoin);
         self.btn_check = self.findChild(QPushButton, "pushButton_check");
         self.btn_check.clicked.connect(self.onClickCheck);
-        self.btn_check2 = self.findChild(QPushButton, "pushButton_check_2");
-        self.btn_check2.clicked.connect(self.onClickCheck2);
+        # self.btn_check2 = self.findChild(QPushButton, "pushButton_check_2");
+        # self.btn_check2.clicked.connect(self.onClickCheck2);
         self.btn_export = self.findChild(QPushButton, "pushButton_export");
         self.btn_export.clicked.connect(self.onClickExport);
+        if self.productType == 1:
+            self.setWindowTitle('海航查询助手')
+            self.btn_check.clicked.connect(self.onClickCheck2);
+        else:
+            self.setWindowTitle('三五查询助手')
+            self.btn_check.clicked.connect(self.onClickCheck);
+
+        exitAction = QAction('激活码', self)
+        exitAction.setShortcut('Ctrl+A')
+        exitAction.triggered.connect(self.onClickActive)
+
+        self.statusBar()
+
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('菜单')
+        fileMenu.addAction(exitAction)
+
         self.list.setColumnCount(2)
         self.list.setRowCount(14);
         self.updateTitle()
@@ -45,6 +69,8 @@ class MyMainWindow(QMainWindow):
         self.list.setColumnWidth(1, 115)
         self.list.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.edit_input.setAcceptDrops(True)#支持拖入文件
+        self.mode = None
+        self.tokens = None
         # self.url = "http://81.71.124.110:3000"
         self.url = "http://localhost:3000"
         self.code = 'B62A495B9CCA0041FC77D13651E7CFBB'
@@ -52,6 +78,29 @@ class MyMainWindow(QMainWindow):
         self.checkdData = None
         self.list.horizontalHeader().setStyleSheet(
             "QHeaderView::section{background-color:rgb(155, 194, 230);font:11pt '宋体';color: black;};")
+        self.loadCode()
+        if self.activeCode is not None:
+            self.login()
+        else:
+            self.statusBar().showMessage('未激活')
+
+    def checkActiveCode(self):
+        if self.activeState:
+            return True
+        else:
+           self.onClickActive()
+           return False
+
+    def onClickActive(self):
+        self.activeDlg = ActiveDialog(self, self.activeCode, self.url, self.productType)
+        self.activeDlg.activeSignal.connect(self.onActived)
+        self.activeDlg.setWindowModality(Qt.ApplicationModal)
+        self.activeDlg.show()
+
+    def onActived(self, code):
+        self.activeCode = code
+        self.activeState = True
+        self.statusBar().showMessage('激活成功')
 
     def updateTitle(self):
         self.list.setHorizontalHeaderLabels(['号码', '状态'])#'序号',
@@ -69,9 +118,11 @@ class MyMainWindow(QMainWindow):
         self.list.clear()
         self.updateTitle()
         text = self.edit_input.toPlainText();
-        if text == None or text == "":
+        if text is None or text == "":
             QMessageBox.information(self, "Information", "内容为空")
             return;
+        if not self.checkActiveCode():
+            return
 
         arr = text.split( )
         count = len(arr)
@@ -88,9 +139,12 @@ class MyMainWindow(QMainWindow):
         if self.mobiles is None:
             QMessageBox.information(self, "Information", "没有可检测的号码")
             return 
-            
-        self.enableControls(False)
+        if not self.checkActiveCode():
+            return
 
+        self.enableControls(False)
+        print('-------self.mode------', self.mode)
+        print('-------self.tokens------', self.tokens)
         if self.mode == 1 and not self.tokens is None:
             self.postLocal(self.mobiles, self.tokens)
         else:
@@ -102,50 +156,114 @@ class MyMainWindow(QMainWindow):
         if self.mobiles is None:
             QMessageBox.information(self, "Information", "没有可检测的号码")
             return 
-            
+        if not self.checkActiveCode():
+            return
+
         self.enableControls(False)
         url = self.url + '/tests/hanghai'
         self.postCloud(url, self.mobiles)
 
     def onClickExport(self):
-        if self.checkdData == None:
-            QMessageBox.information(self, "Information", "没有可导出的数据")
-            return
+        # self.checkdData = self.mobiles
+        try:
+            if self.checkdData == None:
+                QMessageBox.information(self, "Information", "没有可导出的数据")
+                return
+            if not self.checkActiveCode():
+                return
 
-        workbook = Workbook()
+            workbook = Workbook()
 
-        # 默认sheet
-        sheet = workbook.active
-        sheet.title = "默认sheet"
-        # sheet = workbook.create_sheet(title="新sheet")
-        sheet.append(["   序号    ", "    号码     ", "      状态      "])
-        index = 0
-        for data in self.checkdData:
-            index = index + 1
-            column = [index, data['mobile'], data['status']]
-            sheet.append(column)
+            # 默认sheet
+            sheet = workbook.active
+            sheet.title = "默认sheet"
+            # sheet = workbook.create_sheet(title="新sheet")
+            sheet.append(["   序号    ", "    号码     ", "      状态      "])
+            sheet.column_dimensions['A'].width = 10.0
+            sheet.column_dimensions['B'].width = 15.0
+            sheet.column_dimensions['C'].width = 15.0
+            sheet.column_dimensions['A'].alignment = Alignment(horizontal='center', vertical='center')
+            sheet.column_dimensions['B'].alignment = Alignment(horizontal='center', vertical='center')
+            sheet.column_dimensions['C'].alignment = Alignment(horizontal='center', vertical='center')
+            index = 0
+            for data in self.checkdData:
+                index = index + 1
+                column = [index, data['mobile'], data['status']]
+                sheet.append(column)
 
-        workbook.save('../号码.xlsx')
+            outDir = "查询结果"
+            self.mkdir(outDir)
+            print(os.getcwd())
+             # time获取当前时间戳
+            now = int(time.time())  # 1533952277
+            timeArray = time.localtime(now)
+            # otherStyleTime = time.strftime("%Y年%m月%d日%H时%M分%S秒", timeArray)
+            otherStyleTime = time.strftime('%Y{y}%m{m}%d{d}%H{h}%M{M}%S{s}').format(y='年', m='月', d='日', h='时', M='分', s='秒')
+            workbook.save('''../%s/%s.xlsx''' % (outDir, otherStyleTime))
+            self.statusBar().showMessage('保存成功')
+        except Exception as err:
+            self.statusBar().showMessage('保存失败')
+            print(err)
+        finally:
+            pass
+
+    def mkdir(self, outDir):
+        if not self.hasFolder:
+            curDir = os.getcwd()
+            try:
+                os.chdir("..")
+                os.mkdir(outDir)
+                curDir1 = os.getcwd()+'\\'
+                dir = curDir.replace(curDir1, '', 1)
+                os.chdir(dir)
+                self.hasFolder = True
+            except Exception as err:
+                print(err)
+            finally:
+                pass
 
     def login(self):
-        # r = requests.post(url=self.url + '/tests/api', data={'code': self.code},  headers={'Content-Type': 'application/json'})
-        # print(r.json())
-        stringBody = {
-            "code": self.code,
-            # "username": self.code,
-            # "password": self.code,
-        }
-        data = json.dumps(stringBody)
-        HEADERS = {
-            "Content-Type": "application/json ;charset=utf-8 "
-        }
-        print(self.url + '/tests/api')
-        result = requests.post(url=self.url + '/tests/api', data=data, headers=HEADERS)
-        # result = requests.post(url=self.url + '/login', data=data, headers=HEADERS)
-        print(result.text)
-        d = json.loads(result.text)
-        if (d['ret'] == 0):
-            print('d.ret')
+        try:
+            stringBody = {
+                "code": self.activeCode,
+                "ptype": self.productType,
+            }
+            data = json.dumps(stringBody)
+            HEADERS = {
+                "Content-Type": "application/json ;charset=utf-8 "
+            }
+            print(self.url + '/tests/api')
+            result = requests.post(url=self.url + '/tests/api', data=data, headers=HEADERS)
+            print(result.text)
+            d = json.loads(result.text)
+            ret = d['ret']
+            #expire = d['expire']
+            if ret == 0:
+                self.statusBar().showMessage('已激活')
+                self.activeState = True
+                print('d.ret')
+            else:
+                self.statusBar().showMessage('未激活')
+        except Exception as err:
+            print(err)
+            self.statusBar().showMessage('未激活')
+        finally:
+            pass
+
+    def loadCode(self):
+        try:
+            fo = open("Qt5Quit.dll", "r")
+            code = fo.read()
+            if isinstance(code, str):
+                code = code.strip()
+                if code != '':
+                    self.activeCode = code
+            fo.close()
+        except Exception as err:
+            print(err)
+        finally:
+            pass
+            print("loadCode:", self.activeCode)
 
     def loginAdmim(self):
         stringBody = {
@@ -165,6 +283,7 @@ class MyMainWindow(QMainWindow):
             QMessageBox.information(self, "Information", d['msg'])
         else:
             QMessageBox.information(self, "Information", "登录失败")
+        pass
 
     def enableControls(self, enable):
         self.list.setEnabled(enable)
@@ -174,6 +293,7 @@ class MyMainWindow(QMainWindow):
         self.btn_export.setEnabled(enable)
 
     def postCloud(self, url, mobiles):
+        print("-------postCloud-------")
         self.tCloud = CloudThread(self, url, mobiles)
         self.tCloud.sinOut.connect(self.postCloudFinish)
         self.tCloud.sinStep.connect(self.postCloudFinishStep)

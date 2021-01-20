@@ -64,12 +64,12 @@
       <rect>
        <x>20</x>
        <y>350</y>
-       <width>81</width>
+       <width>171</width>
        <height>31</height>
       </rect>
      </property>
      <property name="text">
-      <string>三五检测</string>
+      <string>查 询 数 据</string>
      </property>
     </widget>
     <widget class="QPushButton" name="pushButton_export">
@@ -85,19 +85,6 @@
       <string>导 出 数 据</string>
      </property>
     </widget>
-    <widget class="QPushButton" name="pushButton_check_2">
-     <property name="geometry">
-      <rect>
-       <x>110</x>
-       <y>350</y>
-       <width>81</width>
-       <height>31</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>航海检测</string>
-     </property>
-    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -109,16 +96,9 @@
      <height>23</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menu">
-    <property name="title">
-     <string>菜单</string>
-    </property>
-    <addaction name="action"/>
-   </widget>
-   <addaction name="menu"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="action">
+  <action name="active">
    <property name="text">
     <string>激活码</string>
    </property>
