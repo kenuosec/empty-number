@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="BookmarkManager">
-    <bookmark url="file://$PROJECT_DIR$/main.py" line="226" />
+    <bookmark url="file://$PROJECT_DIR$/main.py" line="247" />
   </component>
   <component name="ChangeListManager">
     <list default="true" id="02d1d8cf-28fa-4477-b51c-fba9e6d9a60e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/active.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Qt5Quit.dll" beforeDir="false" afterPath="$PROJECT_DIR$/Qt5Quit.dll" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" afterPath="$PROJECT_DIR$/build.bat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/main/Analysis-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/main/Analysis-00.toc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/main/COLLECT-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/main/COLLECT-00.toc" afterDir="false" />
@@ -18,8 +18,7 @@
       <change beforePath="$PROJECT_DIR$/build/main/warn-main.txt" beforeDir="false" afterPath="$PROJECT_DIR$/build/main/warn-main.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build/main/xref-main.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/main/xref-main.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.ui" beforeDir="false" afterPath="$PROJECT_DIR$/main.ui" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/start.bat" beforeDir="false" afterPath="$PROJECT_DIR$/start.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/start.bat" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/../server/codes/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../server/codes/index.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../server/tests/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/../server/tests/index.js" afterDir="false" />
     </list>
@@ -30,17 +29,18 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="CoverageDataManager">
-    <SUITE FILE_PATH="coverage/client$EmptyNumber.coverage" NAME="EmptyNumber Coverage Results" MODIFIED="1611136631049" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/client$EmptyNumber.coverage" NAME="EmptyNumber Coverage Results" MODIFIED="1611152879470" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="180">
-              <caret line="185" column="27" lean-forward="true" selection-start-line="185" selection-start-column="27" selection-end-line="185" selection-end-column="27" />
+            <state relative-caret-position="342">
+              <caret line="33" column="36" lean-forward="true" selection-start-line="33" selection-start-column="36" selection-end-line="33" selection-end-column="36" />
               <folding>
                 <element signature="e#175#181#0" expanded="true" />
+                <element signature="e#14109#15574#0" />
               </folding>
             </state>
           </provider>
@@ -49,10 +49,11 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/active.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="190">
-              <caret line="34" column="21" lean-forward="true" selection-start-line="34" selection-start-column="21" selection-end-line="34" selection-end-column="21" />
+            <state relative-caret-position="285">
+              <caret line="15" column="16" selection-start-line="15" selection-start-column="16" selection-end-line="15" selection-end-column="16" />
               <folding>
                 <element signature="e#0#28#0" expanded="true" />
+                <element signature="e#685#982#0" />
               </folding>
             </state>
           </provider>
@@ -81,10 +82,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>setItem</find>
-      <find>mobiles</find>
-      <find>list</find>
-      <find>setTextAlignment</find>
       <find>AlignHCenter</find>
       <find>newItem</find>
       <find>QThread</find>
@@ -105,12 +102,16 @@
       <find>checkActiveCode</find>
       <find>loadCode</find>
       <find>activeState</find>
-      <find>code</find>
-      <find>ActiveDialog</find>
       <find>read</find>
-      <find>login</find>
       <find>checkdData</find>
       <find>os</find>
+      <find>ActiveDialog</find>
+      <find>login</find>
+      <find>loginAdmim</find>
+      <find>code</find>
+      <find>CloudThread</find>
+      <find>updateStatusBar</find>
+      <find>postCloudFinishStep</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -132,9 +133,9 @@
     <auto-save>true</auto-save>
   </component>
   <component name="ProjectFrameBounds" extendedState="1">
-    <option name="x" value="442" />
+    <option name="x" value="41" />
     <option name="width" value="1421" />
-    <option name="height" value="1056" />
+    <option name="height" value="1047" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectView">
@@ -213,15 +214,15 @@
       <workItem from="1610981300202" duration="1428000" />
       <workItem from="1610982944362" duration="3105000" />
       <workItem from="1611026980535" duration="34614000" />
-      <workItem from="1611114742630" duration="16623000" />
+      <workItem from="1611114742630" duration="24701000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="73737000" />
+    <option name="totallyTimeSpent" value="81815000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="442" y="0" width="1421" height="1056" extended-state="0" />
+    <frame x="28" y="0" width="1421" height="1047" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.191036" />
@@ -229,8 +230,8 @@
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.2646421" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.037960954" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.04709748" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.19496167" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
@@ -319,20 +320,22 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/active.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="190">
-          <caret line="34" column="21" lean-forward="true" selection-start-line="34" selection-start-column="21" selection-end-line="34" selection-end-column="21" />
+        <state relative-caret-position="285">
+          <caret line="15" column="16" selection-start-line="15" selection-start-column="16" selection-end-line="15" selection-end-column="16" />
           <folding>
             <element signature="e#0#28#0" expanded="true" />
+            <element signature="e#685#982#0" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="180">
-          <caret line="185" column="27" lean-forward="true" selection-start-line="185" selection-start-column="27" selection-end-line="185" selection-end-column="27" />
+        <state relative-caret-position="342">
+          <caret line="33" column="36" lean-forward="true" selection-start-line="33" selection-start-column="36" selection-end-line="33" selection-end-column="36" />
           <folding>
             <element signature="e#175#181#0" expanded="true" />
+            <element signature="e#14109#15574#0" />
           </folding>
         </state>
       </provider>

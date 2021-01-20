@@ -30,12 +30,13 @@
                     </el-col>
                 </el-form-item>
                 <el-form-item>
-                    <el-button type="primary" @click="loginSubmit('loginForm')"
+                    <el-button class="btn-style" type="primary" @click="loginSubmit('loginForm')"
                         >登录</el-button
                     >
-                    <el-button type="primary" @click="regitSubmit('loginForm')"
+                   
+                    <!-- <el-button type="primary" @click="regitSubmit('loginForm')"
                         >注册</el-button
-                    >
+                    > -->
                 </el-form-item>
             </el-form>
         </div>
@@ -50,6 +51,7 @@
             <el-table id="outTable" :data="activeData" v-loading="loading" element-loading-text="拼命加载中">
                 <el-table-column prop="code" label="激活码" width="200"></el-table-column>
                 <el-table-column prop="date" label="有效期" width="150"></el-table-column>
+                <el-table-column prop="typeName" label="类型" width="50"></el-table-column>
                 <!-- <el-table-column label="操作" width="120">
                     <template slot-scope="scope">
                         <el-button @click="editAttendances(scope.row)" type="text" size="small">编辑</el-button>
@@ -70,7 +72,20 @@
                         :picker-options="pickerOptions">
                     </el-date-picker>
                 </el-form-item>
-                <el-form-item :label="codeTips" label-position="top" label-width="300px"></el-form-item>
+                <el-form-item label="类型" label-width="110px">
+                    <el-select v-model="typeValue" placeholder="请选择">
+                        <el-option
+                            v-for="item in typeOptions"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <span class="active-tips">{{codeTips}}</span>
+                <!-- <span>codeTips1</span>
+                <el-form-item label="" label-width="300px">"codeTips"</el-form-item>
+                <el-form-item label="" label-position="left" label-width="300px">codeTips1</el-form-item> -->
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">取 消</el-button>
@@ -119,7 +134,17 @@ export default {
             },
             loading:false,
             codeTips:"",
+            codeTips1:"",
             needFresh:false,
+
+            typeOptions: [{
+                value: '0',
+                label: '三五'
+            }, {
+                value: '1',
+                label: '海航'
+            }],
+            typeValue: '0'
         };
     },
     methods: {
@@ -153,16 +178,21 @@ export default {
         },
         regitSubmit(formName) {
             // 为表单绑定验证功能
-            this.$refs[formName].validate((valid) => {
-                if (valid) {
-                    this.$message({
-                        message: "请联系管理员注册",
-                        type: "success",
-                    });
-                } else {
-                    return false;
-                }
+            console.log(formName)
+            this.$message({
+                message: "暂不提供注册功能",
+                type: "failed",
             });
+            // this.$refs[formName].validate((valid) => {
+            //     if (valid) {
+            //         this.$message({
+            //             message: "请联系管理员注册",
+            //             type: "success",
+            //         });
+            //     } else {
+            //         return false;
+            //     }
+            // });
         },
         createCode() {
             if (this.expireDate == '') {
@@ -175,14 +205,16 @@ export default {
             this.expireDate.setHours(23)
             this.expireDate.setMinutes(59)
             this.expireDate.setSeconds(59)
-            let data = {token:this.token, expire:this.expireDate.valueOf()}
+            let data = {token:this.token, expire:this.expireDate.valueOf(), ptype: this.typeValue}
             this.codeTips = ''
+            this.codeTips1 = ''
             this.$http.post("codes/create", data).then((res) => {
                 if (res && res.data && res.data.data) {
                     let code = res.data.data.code
                     let expire = res.data.data.expire
                     let date = new Date(expire)
-                    this.codeTips = '生成成功，激活码:' + code + "; 到期时间:"+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()
+                    this.codeTips = '生成成功，激活码:' + code +  "     到期时间:"+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()
+                    this.codeTips1 = 
                     this.needFresh = true
                 } else {
                     this.$message({
@@ -226,7 +258,7 @@ export default {
 }
 .active-box {
     border: 1px solid #dcdfe6;
-    width: 350px;
+    width: 400px;
     margin: 180px auto;
     padding: 35px 35px 15px 35px;
     border-radius: 5px;
@@ -240,5 +272,14 @@ export default {
     color: #66cd00;
     font-size: 30px;
     font-weight: bold;
+}
+.active-tips {
+    text-align: center;
+    margin: 100 auto 40px auto;
+    color: #ff0000;
+    font-size: 12px;
+}
+.btn-style{
+    margin: 10px 20px 0px 80px;
 }
 </style>

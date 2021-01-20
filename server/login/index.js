@@ -9,7 +9,7 @@ login
     let username = ctx.request.body.username || '';
     let password = ctx.request.body.password || '';
 
-    if (username == "123456" && password == "123456"){
+    if (username == "edu" && password == "BBbb123321@@"){
         let token = "12345"//TODO
         ctx.body = {
             token,

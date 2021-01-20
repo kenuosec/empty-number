@@ -1,17 +1,7 @@
 
 const Router = require('koa-router');
+const database = require('../database');
 let token_val = "12345"//TODO
-// const mongoose = require('mongoose');
-
-// const dbOptions = {
-//     useNewUrlParser: true,
-//     useUnifiedTopology: true
-// };
-// mongoose.connect("mongodb://localhost/empty_number", dbOptions).then(
-//     () => { console.info('MongoDB is ready'); },
-//     err => { console.error('connect error:', err); }
-// );
-// const CodesModel = mongoose.model('codes', { code: String, expire: Number });
 
 function randomString(n) {
     let str = 'abcdefghijklmnopqrstuvwxyz9876543210';
@@ -30,13 +20,14 @@ codes
     .post('/create', async (ctx) => {
         console.log(ctx.request.body)
         let token = ctx.request.body.token || '';
-        let expire = ctx.request.body.expire || '';
+        let expire = parseInt(ctx.request.body.expire || '0');
+        let ptype = parseInt(ctx.request.body.ptype || '0');
         console.log("token:" + token)
 
         if (token == token_val) {
             let code = randomString(16)
-            let data = { code, expire }
-            await CodesModel.create(data)
+            let data = { code, expire, ptype }
+            await database.create(data)
             ctx.body = {
                 data,
                 ret: 0
@@ -54,12 +45,14 @@ codes
         console.log("token:" + token)
 
         if (token == token_val) {
-            let set = await CodesModel.find()
+            let set = await database.find({})
+            console.log(set)
             let data = []
             for (let i in set){
                 let expire = set[i].expire
                 let date = new Date(expire)
-                data[i] = {code:set[i].code, expire, date:""+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()}
+                let ptype = parseInt(set[i].ptype)
+                data[i] = {code:set[i].code, expire, date:""+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate(), typeName:(ptype==1)?"海航":"三五"}
             }
             ctx.body = {
                 data,
@@ -70,7 +63,27 @@ codes
                 ret: 1,
                 msg: "数据错误",
             };
+        }
+    })
+    .post('/active', async (ctx) => {
+        console.log(ctx.request.body)
+        let code = ctx.request.body.code || '';
+        let ptype = parseInt(ctx.request.body.ptype || '0')
+        console.log("active code:" + code + "-ptype:" + ptype)
 
+        let set = await database.findAndCheckExpire({code, ptype})
+        console.log(set)
+
+        if (set.length > 0) {
+            ctx.body = {
+                ret: 0,
+                code: code,
+            };
+        } else {
+            ctx.body = {
+                ret: 1,
+                msg: "激活码不存在或已过期",
+            };
         }
     })
 

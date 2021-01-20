@@ -28,7 +28,9 @@ class MyMainWindow(QMainWindow):
     activeCode = None
     activeState = False
     hasFolder = False
-    productType = 0 #0是三五查询助手，1是海航查询助手
+    url = "http://81.71.124.110:3000"
+    # url = "http://localhost:3000"
+    productType = 1 #0是三五查询助手，1是海航查询助手
     def __init__(self, parent=None):
         super(MyMainWindow, self).__init__(parent)
         loadUi("main.ui", self)
@@ -41,8 +43,6 @@ class MyMainWindow(QMainWindow):
         self.btn_join.clicked.connect(self.onClickJoin);
         self.btn_check = self.findChild(QPushButton, "pushButton_check");
         self.btn_check.clicked.connect(self.onClickCheck);
-        # self.btn_check2 = self.findChild(QPushButton, "pushButton_check_2");
-        # self.btn_check2.clicked.connect(self.onClickCheck2);
         self.btn_export = self.findChild(QPushButton, "pushButton_export");
         self.btn_export.clicked.connect(self.onClickExport);
         if self.productType == 1:
@@ -71,9 +71,6 @@ class MyMainWindow(QMainWindow):
         self.edit_input.setAcceptDrops(True)#支持拖入文件
         self.mode = None
         self.tokens = None
-        # self.url = "http://81.71.124.110:3000"
-        self.url = "http://localhost:3000"
-        self.code = 'B62A495B9CCA0041FC77D13651E7CFBB'
         self.mobiles = None
         self.checkdData = None
         self.list.horizontalHeader().setStyleSheet(
@@ -265,28 +262,8 @@ class MyMainWindow(QMainWindow):
             pass
             print("loadCode:", self.activeCode)
 
-    def loginAdmim(self):
-        stringBody = {
-            "code": self.code,
-        }
-        data = json.dumps(stringBody)
-        HEADERS = {
-            "Content-Type": "application/json ;charset=utf-8 "
-        }
-        print(self.url + '/tests/api')
-        result = requests.post(url=self.url + '/tests/api', data=data, headers=HEADERS)
-        d = json.loads(result.text)
-        if d['ret'] == 0:
-            self.tokens = d['tokens']
-            self.mode = d['mode']
-        elif d['msg']:
-            QMessageBox.information(self, "Information", d['msg'])
-        else:
-            QMessageBox.information(self, "Information", "登录失败")
-        pass
-
     def enableControls(self, enable):
-        self.list.setEnabled(enable)
+        # self.list.setEnabled(enable)
         self.edit_input.setEnabled(enable)
         self.btn_join.setEnabled(enable)
         self.btn_check.setEnabled(enable)
@@ -294,34 +271,47 @@ class MyMainWindow(QMainWindow):
 
     def postCloud(self, url, mobiles):
         print("-------postCloud-------")
-        self.tCloud = CloudThread(self, url, mobiles)
+        self.tCloud = CloudThread(self, url, mobiles, 10)
         self.tCloud.sinOut.connect(self.postCloudFinish)
         self.tCloud.sinStep.connect(self.postCloudFinishStep)
         self.tCloud.start()
 
     def postCloudFinish(self, res, start):
         print("-------postCloudFinish-------")
-        self.postCloudFinishStep(res, start)
+        self.postCloudFinishStep1(res, start, True)
         self.enableControls(True)
 
     def postCloudFinishStep(self, res, start):
-        print("-------postCloudFinishStep-------")
-        print(res)
-        count = self.list.rowCount()
-        if res['ret'] == 0:
-            retData = res['data']
-            self.checkdData = retData
-            for i in range(count):
-                if retData[i] and isinstance(retData[i]['status'], str):
-                    newItem = QTableWidgetItem(retData[i]['status'])
-                    newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-                    self.list.setItem(i+start, 1, newItem)
-                pass
-        elif res['msg']:
-            QMessageBox.information(self, "Information", res['msg'])
-        else:
-            QMessageBox.information(self, "Information", "登录失败")
-        pass
+        self.postCloudFinishStep1(res, start)
+
+    def postCloudFinishStep1(self, res, start, isFinish=False):
+        try:
+            print("-------postCloudFinishStep-------")
+            print(res)
+            count = self.list.rowCount()
+            if res['ret'] == 0:
+                retData = res['data']
+                if isFinish:
+                    self.checkdData = retData
+
+                stepLen = len(retData)
+                for i in range(stepLen):
+                    if retData[i] and isinstance(retData[i]['status'], str):
+                        newItem = QTableWidgetItem(retData[i]['status'])
+                        newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
+                        self.list.setItem(i+start, 1, newItem)
+
+                self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:%d''' % (count, start+stepLen))
+
+            elif res['msg']:
+                QMessageBox.information(self, "Information", res['msg'])
+            else:
+                QMessageBox.information(self, "Information", "请求失败")
+        except Exception as err:
+            QMessageBox.information(self, "Information", "请求失败")
+            print(err)
+        finally:
+            pass
 
     def postLocal(self, mobiles, tokens):
         self.tLocal = LocalThread(self, mobiles, tokens)
@@ -419,17 +409,14 @@ class CloudThread(QThread):
             except Exception as err:
                 print(err)
             finally:
-                print("-------finally-------")
-                print(ret)
-                print("-------finally-------")
                 if ret['data']:
-                    print("-------finally-------")
                     for info in ret['data']:
-                        print("-------finally-------", info)
                         finalRet.append(info)
 
                 if start + self.max < count:
-                    # self.sinStep.emit(ret, start)
+                    print('-----------ret---------------')
+                    print(ret)
+                    self.sinStep.emit(ret, start)
                     start = start+self.max
                 else:
                     fRet = {"data": finalRet, "ret": 0}

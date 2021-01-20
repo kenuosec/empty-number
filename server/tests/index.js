@@ -1,4 +1,5 @@
 const koa2Req = require('koa2-request')
+const database = require('../database');
 
 const Router = require('koa-router');
 const JSEncrypt = require('node-jsencrypt');
@@ -80,7 +81,7 @@ async function post(mobile, token) {
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return mobile + "   √"
     } else if (ret && ret.message == "机主状态异常") {
-        return mobile + "   √"
+        return mobile + "   未激活"
     } else if (ret && ret.message == "此号码不支持换卡") {
         return mobile + "   未激活"
     } else if (ret && ret.message == "Too Many Attempts.") {
@@ -98,7 +99,7 @@ async function post1(mobile, token) {
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return { mobile, status: "√" }
     } else if (ret && ret.message == "机主状态异常") {
-        return { mobile, status: "√" }
+        return { mobile, status: "未激活" }
     } else if (ret && ret.message == "此号码不支持换卡") {
         return { mobile, status: "未激活" }
     } else if (ret && ret.message == "Too Many Attempts.") {
@@ -132,7 +133,7 @@ async function postAll(mobiles, mode) {
         } else if (ret.retry) {
             retrys[retrys.length] = { mobile, index: i }
             data[i] = "retry"
-            console.log('--------retrys.length-------' + retrys.length)
+            console.log('--------retrys.length:' + retrys.length)
         } else {
             console.log('--------11-------' + i)
             data[i] = ret
@@ -140,7 +141,7 @@ async function postAll(mobiles, mode) {
     }
 
     let i = 0
-    console.log('--------retrys.length-------' + retrys.length)
+    console.log('--------retrys begin-------length:' + retrys.length)
     while (i < retrys.length) {
         if (i % interval == 0) await delay(5000)
         let index = retrys[i].index
@@ -265,8 +266,12 @@ tests
     .post('/api', async (ctx) => {
         console.log(ctx.request.body)
         let code = ctx.request.body.code || '';
+        let ptype = parseInt(ctx.request.body.ptype || '0');
 
-        if (code == "B62A495B9CCA0041FC77D13651E7CFBB") {
+        let set = await database.findAndCheckExpire({code, ptype})
+        console.log(set)
+
+        if (set.length > 0) {
             ctx.body = {
                 tokens,
                 ret: 0
