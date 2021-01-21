@@ -1,0 +1,1 @@
+D:\github\empty-number\client\venv\Scripts\pyuic5 -o active.py active.ui

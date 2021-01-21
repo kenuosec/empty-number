@@ -26,7 +26,7 @@ codes
 
         if (token == token_val) {
             let code = randomString(16)
-            let data = { code, expire, ptype }
+            let data = { code, expire, ptype, md5:'' }
             await database.create(data)
             ctx.body = {
                 data,
@@ -67,24 +67,44 @@ codes
     })
     .post('/active', async (ctx) => {
         console.log(ctx.request.body)
+        let md5 = ctx.request.body.md5 || '';
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0')
         console.log("active code:" + code + "-ptype:" + ptype)
 
         let set = await database.findAndCheckExpire({code, ptype})
+        console.log('set=========>')
         console.log(set)
 
-        if (set.length > 0) {
-            ctx.body = {
-                ret: 0,
-                code: code,
-            };
+        if (set && set._id) {
+            console.log('md5=========>')
+            console.log(set.md5)
+            if (set.md5 == undefined || set.md5 == '' || md5 == set.md5) {
+                if (set.md5 == undefined || set.md5 == '') {
+                    let data = {
+                        md5,
+                    }
+                    await database.findByIdAndUpdate(set._id, data)
+                }
+                ctx.body = {
+                    ret: 0,
+                    code: code,
+                };
+            } else {
+                ctx.body = {
+                    ret: 1,
+                    msg: "激活码已在其他机器上激活",
+                };
+            }
         } else {
             ctx.body = {
                 ret: 1,
                 msg: "激活码不存在或已过期",
             };
         }
+    })
+    .get('/', async (ctx) => {
+        await database.drop()
     })
 
 module.exports = codes

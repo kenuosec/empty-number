@@ -265,6 +265,7 @@ tests
     })
     .post('/api', async (ctx) => {
         console.log(ctx.request.body)
+        let md5 = ctx.request.body.md5 || '';
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0');
 

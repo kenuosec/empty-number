@@ -9,7 +9,8 @@ Vue.config.productionTip = false//防止在生产环境中产生过多的log输�
 // 创建一个接口和地址,定义到Vue的原型上
 import axios from "axios"
 Vue.prototype.$http = axios.create({
-  baseURL: "http://81.71.124.110:3000"
+  // baseURL: "http://81.71.124.110:3000"
+  baseURL: "http://localhost:3000"
 })
 
 new Vue({
