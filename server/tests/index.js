@@ -3,11 +3,260 @@ const database = require('../database');
 
 const Router = require('koa-router');
 const JSEncrypt = require('node-jsencrypt');
+const request = require('request');
+const fs = require('fs');
+
 
 let tokens = [
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NDcxOTIsImV4cCI6MTYxMTcxMTE5MiwibmJmIjoxNjEwODQ3MTkyLCJqdGkiOiJRcTFlWVowcTdlNnp3alF6Iiwic3ViIjoyMjc4NjksInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.kIPOFb0DapXViQ-GGiGI123c38mXAWccSwaai8wbDSU",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NDcxOTIsImV4cCI6MTYxMTcxMTE5MiwibmJmIjoxNjEwODQ3MTkyLCJqdGkiOiJRcTFlWVowcTdlNnp3alF6Iiwic3ViIjoyMjc4NjksInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.kIPOFb0DapXViQ-GGiGI123c38mXAWccSwaai8wbDSU",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDA4MzcsImV4cCI6MTYxMjEwNDgzNywibmJmIjoxNjExMjQwODM3LCJqdGkiOiJ1U0N5bDB6SVlkWlFoUDJiIiwic3ViIjoyMjE2MDIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.d7G1X9k7LBrHhrkpfaqRC3si-iv60qsRSNPidWB1K8s",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyMzk3ODIsImV4cCI6MTYxMjEwMzc4MiwibmJmIjoxNjExMjM5NzgyLCJqdGkiOiJmekFJU3V0NXFzMzFXWGpnIiwic3ViIjoyMzM3MDYsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.O9zBK2RnyhPIqGpq40E2IPjj4VExcyezX5fRCr4kMvU",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDExOTMsImV4cCI6MTYxMjEwNTE5MywibmJmIjoxNjExMjQxMTkzLCJqdGkiOiJXc3IwYk5NblVpenRQRFdGIiwic3ViIjoxOTExNDgsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.6ZnUCVnUNu_x80XU11fC3q1UEwGPhMQ7f7XTSe-0sxs",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDEzNjMsImV4cCI6MTYxMjEwNTM2MywibmJmIjoxNjExMjQxMzYzLCJqdGkiOiJncWl3WFZxUzlvTnpEaGxRIiwic3ViIjoyMzQ1OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.bt9K6KiuaUUhGed8GEOasNLuQwTJGt4gHrHnqmLWiK0",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDIyNDgsImV4cCI6MTYxMjEwNjI0OCwibmJmIjoxNjExMjQyMjQ4LCJqdGkiOiJwaVV1UWE5MnljRndVNXJoIiwic3ViIjoyMzQ2MDUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.sAa7f6enEVzlBWq8Ad88iXX1HQKwcPJdXqUnywBJw7E",
 ]
+
+class TelChecker {
+    constructor (callback) {
+		this.alldata = [];
+		this.state = {
+			current : 0,
+			total : 0,
+        }
+        this.retryTimes = 0
+        this.curTokenIdx = 0
+        
+        this.callback = callback;
+    }
+
+    async checkAsync (telNo) {
+
+		telNo = parseInt (telNo) || 0;
+	
+		if (!telNo) {
+			return Promise.resolve ({})
+		}
+	
+		var body = this.encData (JSON.stringify ({
+			MOBILE: telNo + "", 
+			industry: "0"
+		}));
+
+		var url = 'https://weixin.10044.cn/wechat/service/api/gatewayH5/IdentifyService/validate';
+
+		return new Promise ((resolve,reject) => {
+
+			request.post (url,{
+				headers : {
+					'User-Agent' : 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36 MicroMessenger/7.0.9.501 NetType/WIFI MiniProgramEnv/Windows WindowsWechat' + telNo,
+					'content-type': 'application/json;charset=UTF-8',
+				},
+				body : body,
+			},(error, response, body) => {
+		
+				// console.log (body);
+				if (!error) {
+					try {
+						var info = JSON.parse (body);
+						return resolve (info);
+					} catch (e) {
+						return resolve ({});
+					}
+				} else {
+					return resolve ({});
+				}
+			})
+		})
+	}
+
+    async checkAsync2 (telNo) {
+		telNo = parseInt (telNo) || 0;
+	
+		if (!telNo) {
+			return Promise.resolve ({})
+		}
+	
+        var url = joinParams(`https://swszxcx.35sz.net/api/v1/card-replacement/query`, { mobile:telNo });
+        let authorization = tokens[this.curTokenIdx]
+        this.curTokenIdx = (this.curTokenIdx++)%tokens.length
+        // console.log(authorization)
+
+		return new Promise ((resolve,reject) => {
+
+			request.post (url,{
+				headers : {
+                    "Authorization": authorization,
+                    'content-type': 'application/json',
+                },
+                body : {},
+                json: true,
+			},(error, response, body) => {
+		
+				console.log (body);
+				if (!error) {
+					try {
+						// var info = JSON.parse (body);
+						return resolve (body);
+					} catch (e) {
+						return resolve ({});
+					}
+				} else {
+					return resolve ({});
+				}
+			})
+		})
+	}
+	
+	async checkSingle (tel, is35) {
+        let info 
+        if (is35)
+            info = await this.checkAsync2 (tel);
+        else
+            info = await this.checkAsync (tel);
+		console.log (info);
+		let current = this.state.current ;
+		current ++;
+		this.setState ({current : current});
+		info.tel = tel;
+		return Promise.resolve (info)
+	}
+    
+    encData (t) {
+		var e = new JSEncrypt ();
+		e.setPublicKey("-----BEGIN PUBLIC KEY-----MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvPcyDxC9rfwvDxbuurZcYLaHPqMeQYZa6zhpKJDVQcftzHzCCL6u3creyHp+ZlByTxKZCpNSIpPf4XQoDxfgw62CGkVYrxxFqfCdxWDjnmY2Kio8txvsmmddgZeWomylRvaCSx2dTPdL+BzX+sbU5F6jNklmIV5H6o94X0hvTgVqPRvOUxX/+feaEvgcjqyqL5rX3ZrJfYllxiu5bqKZ6uWvAvcEMnJmQHcyHWN8kc8tP+IM6SEMrlu6Sl82xtvY9HNKjltVe6WnDPROwwKOYfzsq5iNB6J2XXT2w9Ykn9BjPxzgF+KqGqbbejLKwZ3EYz5Km5ftQbCEFNKGrxvZkwIDAQAB-----END PUBLIC KEY-----");
+		t = encodeURIComponent(t);
+		for (var n = t.replace(/[\u0391-\uFFE5]/g, "aa").length, i = 0, r = 118, o = new Array; i <= n; ) {
+			o.push(e.encrypt(t.substring(i, r)));
+			i = r;
+			r += 117;
+		}
+		return o.join(",");
+	}
+
+	async delayTime (ms) {
+		return new Promise ((resolve,reject) => {
+			setTimeout(() => {
+				resolve ();
+			}, ms);
+		})
+	}
+
+	async exportToFile () {
+        let alldata = this.alldata || [];
+        let retdata = []
+        let retrydata = []
+
+		for (let i = 0 ;i < alldata.length ; i ++) {
+			let info = alldata [i];
+			let status = {mobiles:info.tel};
+
+            if (info.data && info.data.RESULT == '05') {
+				status.status = '√'
+                retdata.push(status)
+            }else if (info.data && info.data.RESULT == '03') {
+                status.status = '未激活'
+                 retdata.push(status)
+            }else{
+                retrydata.push(info.tel)
+            }
+        }
+        if (retrydata.length > 0 && this.retryTimes < 3){
+            this.retryTimes ++
+            this.checkBatch(retrydata)
+        }else{
+            this.callback && this.callback (retdata);
+        }
+	}
+
+	async exportToFile2 () {
+        let alldata = this.alldata || [];
+        let retdata = []
+        let retrydata = []
+
+		for (let i = 0 ;i < alldata.length ; i ++) {
+			let ret = alldata [i];
+            let mobile = ret.tel
+            console.log('=========================')
+            console.log(ret)
+            if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
+                retdata.push( { mobile, status: "√" })
+            } else if (ret && ret.message == "机主状态异常") {
+                retdata.push( { mobile, status: "未激活" })
+            } else if (ret && ret.message == "此号码不支持换卡") {
+                retdata.push( { mobile, status: "未激活" })
+            } else if (ret && ret.message == "Too Many Attempts.") {
+                retrydata.push( { mobile, retry: true })
+            } else {
+                retdata.push( { mobile, ret, status: "失败" })
+            }
+        }
+        if (retrydata.length > 0 && this.retryTimes < 3){
+            this.retryTimes ++
+            this.checkBatch(retrydata, true)
+        }else{
+            this.callback && this.callback (retdata);
+        }
+	}
+
+	async checkBatch (telNumbArray, is35) {
+
+        let BATCH_NUM = 60*tokens.length;
+        if (!is35) BATCH_NUM = 200
+
+		let promises = [];
+
+		for (let i = 0 ; i < BATCH_NUM ; i ++) {
+			let tel = telNumbArray.pop ();
+			if (tel) {
+				promises.push (this.checkSingle (tel, is35));
+			}
+		}
+
+		let infos = await Promise.all (promises);
+		this.alldata.push (...infos);
+
+		let tellen = telNumbArray.length;
+		if (tellen <= 0) {
+            console.info ("检测完成,正在导出数据");
+            if (is35) 
+                this.exportToFile2 ();
+            else
+                this.exportToFile ();
+			return ;
+		}
+
+        if (is35) await this.delayTime (8000);
+		else await this.delayTime (5000);
+
+		this.checkBatch (telNumbArray, is35);
+	}
+
+	setState (state) {
+
+	}
+
+	checkFile (filePath) {
+		fs.readFile (filePath,'utf8',(err,data) => {
+			if (err) {
+				console.error (err);
+				return ;
+			}
+		
+			data = data.trim ();
+
+			let telNumbArray = data.split ("\r\n");
+
+			this.setState ({
+				showProgress : true,
+				total : telNumbArray.length,
+				current : 0,
+			});
+
+			this.checkBatch (telNumbArray);
+		})
+	}
+}
 
 let joinParams = function (path, params) {
     var url = path;
@@ -78,6 +327,7 @@ async function post(mobile, token) {
     let url = `https://swszxcx.35sz.net/api/v1/card-replacement/query`
     let params = { mobile }
     let ret = await httpRequest(url, params, {}, token)
+    console.log(ret)
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return mobile + "   √"
     } else if (ret && ret.message == "机主状态异常") {
@@ -96,6 +346,7 @@ async function post1(mobile, token) {
     let url = `https://swszxcx.35sz.net/api/v1/card-replacement/query`
     let params = { mobile }
     let ret = await httpRequest(url, params, {}, token)
+    console.log(ret)
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return { mobile, status: "√" }
     } else if (ret && ret.message == "机主状态异常") {
@@ -183,6 +434,26 @@ async function postHanghai(mobile) {
     }
 }
 
+async function getAllHHData (mobiles) {
+    return new Promise ((resolve,reject) => {
+        let chker = new TelChecker ((data) => {
+            resolve (data);
+        })
+        chker.checkBatch(mobiles, false)
+    })
+
+}
+
+async function getAll35HData (mobiles) {
+    return new Promise ((resolve,reject) => {
+        let chker = new TelChecker ((data) => {
+            resolve (data);
+        })
+        chker.checkBatch(mobiles, true)
+    })
+
+}
+
 async function postAllHanghai(mobiles, mode) {
     let data = []
     let retrys = []
@@ -246,7 +517,8 @@ let tests = new Router();
 tests
     .get('/', async (ctx) => {
         let mobiles = (ctx.query.mobiles || '').split(',');//get
-        let data = await postAll(mobiles)
+        // let data = await postAll(mobiles)
+        let data = await getAll35HData(mobiles, 1)
 
         ctx.body = {
             data,
@@ -256,7 +528,8 @@ tests
     .post('/', async (ctx) => {
         let mobiles = ctx.request.body.mobiles || '';//post
         console.log(mobiles)
-        let data = await postAll(mobiles, 1)
+        // let data = await postAll(mobiles, 1)
+        let data = await getAll35HData(mobiles, 1)
 
         ctx.body = {
             data,
@@ -290,7 +563,8 @@ tests
         // let mobiles = (ctx.query.mobiles || '').split(',');//get
         console.log(mobiles)
 
-        let data = await postAllHanghai(mobiles)
+        // let data = await postAllHanghai(mobiles)
+        let data = await getAllHHData(mobiles)
 
         ctx.body = {
             data,

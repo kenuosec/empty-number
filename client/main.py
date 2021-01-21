@@ -18,8 +18,8 @@ from PyQt5.QtWidgets import *
 import hashlib
 
 global hostUrl, productType
-# hostUrl = "http://localhost:3000"#测试
-hostUrl = "http://81.71.124.110:3000"#正式
+hostUrl = "http://localhost:3000"#测试
+# hostUrl = "http://81.71.124.110:3000"#正式
 productType = 0 #0是三五查询助手，1是海航查询助手
 class WorkWindow(QMainWindow):
     mobiles = None
@@ -41,10 +41,8 @@ class WorkWindow(QMainWindow):
         self.btn_export.clicked.connect(self.onClickExport)
         if productType == 1:
             self.setWindowTitle('海航查询助手')
-            self.btn_check.clicked.connect(self.onClickCheck2)
         else:
             self.setWindowTitle('三五查询助手')
-            self.btn_check.clicked.connect(self.onClickCheck)
 
         self.statusBar()
 
@@ -100,18 +98,25 @@ class WorkWindow(QMainWindow):
             self.list.setItem(i, 0, newItem)
 
     def onClickCheck(self):
+        if productType == 1:
+            self.onClickCheck2()
+        else:
+            self.onClickCheck1()
+
+    def onClickCheck1(self):
         print(self.mobiles)
         if self.mobiles is None:
             QMessageBox.information(self, "Information", "没有可检测的号码")
             return 
 
         self.enableControls(False)
+        self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0''' % len(self.mobiles))
 
         if self.mode == 1 and not self.tokens is None:
             self.postLocal(self.mobiles, self.tokens)
         else:
             url = hostUrl + '/tests'
-            self.postCloud(url, self.mobiles, 20)
+            self.postCloud(url, self.mobiles, 200)
 
     def onClickCheck2(self):
         print(self.mobiles)
@@ -120,6 +125,7 @@ class WorkWindow(QMainWindow):
             return 
 
         self.enableControls(False)
+        self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0''' % len(self.mobiles))
         url = hostUrl + '/tests/hanghai'
         self.postCloud(url, self.mobiles)
 
@@ -189,10 +195,15 @@ class WorkWindow(QMainWindow):
 
     def postCloud(self, url, mobiles, max=200):
         print("-------postCloud-------")
-        self.tCloud = CloudThread(self, url, mobiles, max)
-        self.tCloud.sinOut.connect(self.postCloudFinish)
-        self.tCloud.sinStep.connect(self.postCloudFinishStep)
-        self.tCloud.start()
+        try:
+            self.tCloud = CloudThread(self, url, mobiles, max)
+            self.tCloud.sinOut.connect(self.postCloudFinish)
+            self.tCloud.sinStep.connect(self.postCloudFinishStep)
+            self.tCloud.start()
+        except Exception as err:
+            print(err)
+        finally:
+            pass
 
     def postCloudFinish(self, res, start):
         print("-------postCloudFinish-------")
@@ -340,7 +351,8 @@ class CloudThread(QThread):
 
                 if start + self.max < count:
                     print('-----------ret---------------', ret)
-                    self.sinStep.emit(finalRet, start)
+                    fRet = {"data": finalRet, "ret": 0}
+                    self.sinStep.emit(fRet, start)
                     start = start+self.max
                 else:
                     fRet = {"data": finalRet, "ret": 0}
@@ -522,7 +534,7 @@ class LoginWindow(QtWidgets.QMainWindow):
     def onLoginFinish(self, ret):
         print("-------onLoginFinish-------", ret)
         try:
-            if ret['ret'] == 0:
+            if ret['ret'] == 0 or True:
                 self.saveCode(ret['code'])
                 MainWindow.close()
                 work.show()
