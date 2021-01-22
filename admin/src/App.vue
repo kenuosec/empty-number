@@ -48,7 +48,7 @@
                 <el-button type="primary" native-type="submit" @click="dialogFormVisible = true">生成激活码</el-button>
                 </el-form-item>
             </el-form>
-            <el-table id="outTable" :data="activeData" v-loading="loading" element-loading-text="拼命加载中">
+            <el-table id="outTable" :data="activeData.slice((currpage - 1) * pagesize, currpage * pagesize)" v-loading="loading" element-loading-text="拼命加载中">
                 <el-table-column prop="code" label="激活码" width="200"></el-table-column>
                 <el-table-column prop="date" label="有效期" width="150"></el-table-column>
                 <el-table-column prop="typeName" label="类型" width="50"></el-table-column>
@@ -59,18 +59,30 @@
                     </template>
                 </el-table-column> -->
             </el-table>
-            
+            <el-pagination background 
+                layout="prev, pager, next, total"
+                :page-sizes="pagesizes"
+                :page-size="pagesize"
+                :total="activeData.length"
+                @current-change="handleCurrentChange"  
+                @size-change="handleSizeChange" 
+                >
+            </el-pagination>
             <!-- 编辑弹框 -->
-            <el-dialog title="生成激活码" :visible.sync="dialogFormVisible" :lock-scroll='true' :close-on-click-modal='false' width="450px" center>
+            <el-dialog title="生成激活码" :visible.sync="dialogFormVisible" :lock-scroll='true' :close-on-click-modal='false' width="450px" @close='closeDialog' center>
             <el-form>
                 <el-form-item label="有效期" label-width="110px">
-                    <el-date-picker
+                    <el-input
+                            type="text"
+                            v-model="expireDate"
+                    ></el-input>
+                    <!-- <el-date-picker
                         v-model="expireDate"
                         format="yyyy-MM-dd"
                         type="date"
                         placeholder="选择到期日期"
                         :picker-options="pickerOptions">
-                    </el-date-picker>
+                    </el-date-picker> -->
                 </el-form-item>
                 <el-form-item label="类型" label-width="110px">
                     <el-select v-model="typeValue" placeholder="请选择">
@@ -88,7 +100,7 @@
                 <el-form-item label="" label-position="left" label-width="300px">codeTips1</el-form-item> -->
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="dialogFormVisible = false">取 消</el-button>
+                <el-button @click="closeDialog()">取 消</el-button>
                 <el-button type="primary" @click="createCode()">生 成</el-button>
             </div>
             </el-dialog>
@@ -125,7 +137,7 @@ export default {
             },
             activeData: [],
             dialogFormVisible:false,
-            expireDate:"",
+            expireDate:0,
             pickerOptions: {
                 disabledDate(time) {
                     let now = new Date().valueOf()
@@ -144,7 +156,10 @@ export default {
                 value: '1',
                 label: '海航'
             }],
-            typeValue: '0'
+            typeValue: '0',
+            pagesize : 15,
+            currpage: 1,
+            pagesizes:[15],
         };
     },
     methods: {
@@ -195,26 +210,25 @@ export default {
             // });
         },
         createCode() {
-            if (this.expireDate == '') {
+            let expire = parseInt(this.expireDate) || 0
+            if (this.expireDate == "0.1") expire = 3600000 
+            else expire = expire*24*3600000 
+            if (expire <= 0) {
                 this.$message({
-                    message: "请先选择到期时间",
+                    message: "请填写正确的有效期",
                     type: "failed",
                 });
                 return
             }
-            this.expireDate.setHours(23)
-            this.expireDate.setMinutes(59)
-            this.expireDate.setSeconds(59)
-            let data = {token:this.token, expire:this.expireDate.valueOf(), ptype: this.typeValue}
+            let data = {token:this.token, expire:expire, ptype: this.typeValue}
             this.codeTips = ''
             this.codeTips1 = ''
             this.$http.post("codes/create", data).then((res) => {
                 if (res && res.data && res.data.data) {
                     let code = res.data.data.code
                     let expire = res.data.data.expire
-                    let date = new Date(expire)
-                    this.codeTips = '生成成功，激活码:' + code +  "     到期时间:"+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate()
-                    this.codeTips1 = 
+                    this.codeTips = '生成成功，激活码: ' + code +  "     有效期:"+expire+"天"
+                    this.codeTips1 = ''
                     this.needFresh = true
                 } else {
                     this.$message({
@@ -232,6 +246,7 @@ export default {
                 console.log(res.data)
                 if (res && res.data && res.data.data instanceof Array) {
                     this.activeData = res.data.data
+                    this.needFresh = false
                 } else {
                     this.$message({
                         message: "数据错误",
@@ -241,6 +256,19 @@ export default {
 
                 console.log(res.data)
             });
+        },
+        closeDialog() {
+            this.dialogFormVisible = false
+            if (this.needFresh) this.requestCodes()
+        },
+        handleCurrentChange(cpage) {
+            this.currpage = cpage;
+        },
+        handleSizeChange(psize) {
+            this.pagesize = psize;
+        },
+        handleSelectionChange(val) {
+            console.log(val)
         }
     },
 };
@@ -258,7 +286,7 @@ export default {
 }
 .active-box {
     border: 1px solid #dcdfe6;
-    width: 400px;
+    width: 480px;
     margin: 180px auto;
     padding: 35px 35px 15px 35px;
     border-radius: 5px;

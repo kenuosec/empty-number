@@ -49,10 +49,12 @@ codes
             console.log(set)
             let data = []
             for (let i in set){
-                let expire = set[i].expire
-                let date = new Date(expire)
-                let ptype = parseInt(set[i].ptype)
-                data[i] = {code:set[i].code, expire, date:""+date.getFullYear()+"/"+(date.getMonth()+1)+"/"+date.getDate(), typeName:(ptype==1)?"海航":"三五"}
+                let expire = parseInt(set[i].expire)
+                if (expire < 1000000000 && expire >=3600000) {
+                    let date = (expire == 3600000)?'1 小时':((expire/(24*3600000)).toFixed(0) + " 天") 
+                    let ptype = parseInt(set[i].ptype)
+                    data.push({code:set[i].code, expire, date, typeName:(ptype==1)?"海航":"三五"})
+                }
             }
             ctx.body = {
                 data,
@@ -83,6 +85,7 @@ codes
                 if (set.md5 == undefined || set.md5 == '') {
                     let data = {
                         md5,
+                        active_time : new Date().valueOf()
                     }
                     await database.findByIdAndUpdate(set._id, data)
                 }

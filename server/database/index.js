@@ -11,7 +11,7 @@ mongoose.connect("mongodb://localhost/empty_number", dbOptions).then(
     () => { console.info('MongoDB is ready'); },
     err => { console.error('connect error:', err); }
 );
-const CodesModel = mongoose.model('codes', { code: String, md5: String, expire: Number, ptype: Number });
+const CodesModel = mongoose.model('codes', { code: String, md5: String, expire: Number, ptype: Number, active_time: Number });
 
 let db = {}
 
@@ -27,9 +27,10 @@ db.findAndCheckExpire = async function(condition) {
     if (ret && ret._id){
         let data = ret
         let expire = parseInt(data.expire || 0)
+        let active_time = parseInt(data.active_time || 0)
         let cur = new Date().valueOf()
         console.log('----findAndCheckExpire----cur:'+cur + "---expire:"+expire)
-        if (expire > cur) return ret
+        if (active_time <= 0 || (active_time + expire < cur)) return ret
     }
     return {}
 }

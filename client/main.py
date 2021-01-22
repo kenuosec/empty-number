@@ -8,7 +8,8 @@ import wmi
 
 from PyQt5.uic import loadUi
 from PyQt5 import QtCore, QtWidgets, Qt
-from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal, QUrl
+from PyQt5.QtGui import QDesktopServices
 import requests
 from openpyxl import Workbook
 from openpyxl.styles import Alignment
@@ -17,10 +18,11 @@ from PyQt5.QtWidgets import *
 # from PyQt5.QtGui import QIcon
 import hashlib
 
-global hostUrl, productType
+global hostUrl, productType, marketUrl
 hostUrl = "http://localhost:3000"#测试
 # hostUrl = "http://81.71.124.110:3000"#正式
 productType = 0 #0是三五查询助手，1是海航查询助手
+marketUrl = "http://fk.ttm888.net/"
 class WorkWindow(QMainWindow):
     mobiles = None
     hasFolder = False
@@ -52,6 +54,10 @@ class WorkWindow(QMainWindow):
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(qApp.quit)
         fileMenu.addAction(exitAction)
+        exitAction = QAction('联系我们', self)
+        exitAction.setShortcut('Ctrl+M')
+        exitAction.triggered.connect(self.gotoMarket)
+        menubar.addAction(exitAction)
 
         self.list.setColumnCount(2)
         self.list.setRowCount(14)
@@ -82,14 +88,15 @@ class WorkWindow(QMainWindow):
         self.checkdData = None
         self.list.clear()
         self.updateTitle()
-        text = self.edit_input.toPlainText();
+        text = self.edit_input.toPlainText()
+        self.edit_input.setText('')
         if text is None or text == "":
             QMessageBox.information(self, "Information", "内容为空")
-            return;
+            return
 
         arr = text.split( )
         count = len(arr)
-        self.list.setRowCount(count);
+        self.list.setRowCount(count)
         self.mobiles = arr
         self.updateStatusBar()
         for i in range(count):
@@ -116,7 +123,7 @@ class WorkWindow(QMainWindow):
             self.postLocal(self.mobiles, self.tokens)
         else:
             url = hostUrl + '/tests'
-            self.postCloud(url, self.mobiles, 200)
+            self.postCloud(url, self.mobiles, 60*2)
 
     def onClickCheck2(self):
         print(self.mobiles)
@@ -127,7 +134,7 @@ class WorkWindow(QMainWindow):
         self.enableControls(False)
         self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0''' % len(self.mobiles))
         url = hostUrl + '/tests/hanghai'
-        self.postCloud(url, self.mobiles)
+        self.postCloud(url, self.mobiles, 200)
 
     def onClickExport(self):
         # self.checkdData = self.mobiles
@@ -297,6 +304,10 @@ class WorkWindow(QMainWindow):
             print(err)
         finally:
             pass
+
+    def gotoMarket(self):
+        QDesktopServices.openUrl(QUrl(marketUrl))
+
 class CloudThread(QThread):
     sinOut = pyqtSignal(dict, int)
     sinStep = pyqtSignal(dict, int)
@@ -409,6 +420,8 @@ class LoginWindow(QtWidgets.QMainWindow):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(278, 108)
+        MainWindow.setFixedSize(MainWindow.width(), MainWindow.height())
+
         # MainWindow.setWindowIcon(QIcon('logo.png'))
         # MainWindow.setStyleSheet("background-image:url(Background.jpg)")
         self.centralWidget = QtWidgets.QWidget(MainWindow)
@@ -428,11 +441,15 @@ class LoginWindow(QtWidgets.QMainWindow):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         self.label.setObjectName("label")
         self.pushButton = QtWidgets.QPushButton(self.centralWidget)
-        self.pushButton.setGeometry(QtCore.QRect(110, 70, 75, 23))
+        self.pushButton.setGeometry(QtCore.QRect(50, 70, 75, 23))
         self.pushButton.setObjectName("pushButton")
+        self.pushButton1 = QtWidgets.QPushButton(self.centralWidget)
+        self.pushButton1.setGeometry(QtCore.QRect(170, 70, 75, 23))
+        self.pushButton1.setObjectName("pushButton")
         MainWindow.setCentralWidget(self.centralWidget)
 
         self.pushButton.clicked.connect(self.onClickCheck)
+        self.pushButton1.clicked.connect(self.gotoMarket)
 
         self.retranslateUi(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
@@ -444,6 +461,7 @@ class LoginWindow(QtWidgets.QMainWindow):
         self.label.setText(_translate("MainWindow", "正在登录，请稍候..."))
         # self.label1.setText(_translate("MainWindow", "激活码无效或已过期"))
         self.pushButton.setText(_translate("MainWindow", "激  活"))
+        self.pushButton1.setText(_translate("MainWindow", "购  买"))
 
         self.ptype = productType
 
@@ -534,7 +552,7 @@ class LoginWindow(QtWidgets.QMainWindow):
     def onLoginFinish(self, ret):
         print("-------onLoginFinish-------", ret)
         try:
-            if ret['ret'] == 0 or True:
+            if ret['ret'] == 0:
                 self.saveCode(ret['code'])
                 MainWindow.close()
                 work.show()
@@ -571,6 +589,9 @@ class LoginWindow(QtWidgets.QMainWindow):
             print(err)
         finally:
             pass
+
+    def gotoMarket(self):
+        QDesktopServices.openUrl(QUrl(marketUrl))
 
 class LoginThread(QThread):
     sinOut = pyqtSignal(dict)
