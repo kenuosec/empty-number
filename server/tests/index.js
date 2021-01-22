@@ -78,7 +78,9 @@ class TelChecker {
 		}
         var url = joinParams(`https://swszxcx.35sz.net/api/v1/card-replacement/query`, { mobile:telNo });
         let authorization = tokens[this.curTokenIdx]
-        this.curTokenIdx = (this.curTokenIdx++)%tokens.length
+        this.curTokenIdx++
+        this.curTokenIdx = this.curTokenIdx%tokens.length
+        console.log('-------authorization------'+this.curTokenIdx+"=="+authorization)
 
 		return new Promise ((resolve,reject) => {
 
@@ -90,7 +92,7 @@ class TelChecker {
                 body : {},
                 json: true,
 			},(error, response, body) => {
-                console.log(body)
+                // console.log(body)
 				if (!error) {
 					try {
 						return resolve (body);
@@ -138,31 +140,41 @@ class TelChecker {
 		})
 	}
 
-	async exportToFile () {
-        let alldata = this.alldata || [];
-        let retdata = []
+	async exportToFile (dealingData) {
+        let retdata = this.retdata || [];
+        console.log('---exportToFile--this.retryTimes:'+this.retryTimes)
+        if (this.retryTimes > 0) {
+            retdata = []
+        }
         let retrydata = []
 
-		for (let i = 0 ;i < alldata.length ; i ++) {
-			let info = alldata [i];
-			let status = {mobiles:info.tel};
+		for (let i = 0 ;i < dealingData.length ; i ++) {
+			let info = dealingData [i];
 
             if (info.data && info.data.RESULT == '05') {
-				status.status = '√'
-                retdata.push(status)
+                retdata.push({mobiles:info.tel, status : '√'})
             }else if (info.data && info.data.RESULT == '03') {
-                status.status = '未激活'
-                 retdata.push(status)
-            }else{
+                retdata.push({mobiles:info.tel, status : '未激活'})
+            }else {
+                console.log('---exportToFile----1111----:'+this.retryTimes)
+                if (this.retryTimes == 0) 
+                    retdata.push( { mobile, status: "失败", retry: true })
                 retrydata.push(info.tel)
             }
+        }
+
+        //将重试的结果合并到全局的结果里
+        if (this.retryTimes > 0 && retdata.length > 0){
+            this.mergeRetryData(retdata)
         }
         if (retrydata.length > 0 && this.retryTimes < 3){
             this.retryTimes ++
 		    await this.delayTime (5000);
             await this.checkBatch(retrydata)
         }else{
-            this.callback && this.callback (retdata);
+            console.log('--------callback------')
+            console.log(this.retdata)
+            this.callback && this.callback (this.retdata);
         }
     }
     
