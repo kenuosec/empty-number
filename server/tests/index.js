@@ -8,18 +8,19 @@ const fs = require('fs');
 
 
 let tokens = [
-    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc",
-    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NDcxOTIsImV4cCI6MTYxMTcxMTE5MiwibmJmIjoxNjEwODQ3MTkyLCJqdGkiOiJRcTFlWVowcTdlNnp3alF6Iiwic3ViIjoyMjc4NjksInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.kIPOFb0DapXViQ-GGiGI123c38mXAWccSwaai8wbDSU",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NDcxOTIsImV4cCI6MTYxMTcxMTE5MiwibmJmIjoxNjEwODQ3MTkyLCJqdGkiOiJRcTFlWVowcTdlNnp3alF6Iiwic3ViIjoyMjc4NjksInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.kIPOFb0DapXViQ-GGiGI123c38mXAWccSwaai8wbDSU",
     // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDA4MzcsImV4cCI6MTYxMjEwNDgzNywibmJmIjoxNjExMjQwODM3LCJqdGkiOiJ1U0N5bDB6SVlkWlFoUDJiIiwic3ViIjoyMjE2MDIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.d7G1X9k7LBrHhrkpfaqRC3si-iv60qsRSNPidWB1K8s",
     // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyMzk3ODIsImV4cCI6MTYxMjEwMzc4MiwibmJmIjoxNjExMjM5NzgyLCJqdGkiOiJmekFJU3V0NXFzMzFXWGpnIiwic3ViIjoyMzM3MDYsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.O9zBK2RnyhPIqGpq40E2IPjj4VExcyezX5fRCr4kMvU",
     // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDExOTMsImV4cCI6MTYxMjEwNTE5MywibmJmIjoxNjExMjQxMTkzLCJqdGkiOiJXc3IwYk5NblVpenRQRFdGIiwic3ViIjoxOTExNDgsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.6ZnUCVnUNu_x80XU11fC3q1UEwGPhMQ7f7XTSe-0sxs",
     // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDEzNjMsImV4cCI6MTYxMjEwNTM2MywibmJmIjoxNjExMjQxMzYzLCJqdGkiOiJncWl3WFZxUzlvTnpEaGxRIiwic3ViIjoyMzQ1OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.bt9K6KiuaUUhGed8GEOasNLuQwTJGt4gHrHnqmLWiK0",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDIyNDgsImV4cCI6MTYxMjEwNjI0OCwibmJmIjoxNjExMjQyMjQ4LCJqdGkiOiJwaVV1UWE5MnljRndVNXJoIiwic3ViIjoyMzQ2MDUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.sAa7f6enEVzlBWq8Ad88iXX1HQKwcPJdXqUnywBJw7E",
+    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTEyNDIyNDgsImV4cCI6MTYxMjEwNjI0OCwibmJmIjoxNjExMjQyMjQ4LCJqdGkiOiJwaVV1UWE5MnljRndVNXJoIiwic3ViIjoyMzQ2MDUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.sAa7f6enEVzlBWq8Ad88iXX1HQKwcPJdXqUnywBJw7E",
 ]
 
 class TelChecker {
     constructor (callback) {
 		this.alldata = [];
+        this.retdata = [];
 		this.state = {
 			current : 0,
 			total : 0,
@@ -55,7 +56,6 @@ class TelChecker {
 				body : body,
 			},(error, response, body) => {
 		
-				// console.log (body);
 				if (!error) {
 					try {
 						var info = JSON.parse (body);
@@ -76,11 +76,9 @@ class TelChecker {
 		if (!telNo) {
 			return Promise.resolve ({})
 		}
-	
         var url = joinParams(`https://swszxcx.35sz.net/api/v1/card-replacement/query`, { mobile:telNo });
         let authorization = tokens[this.curTokenIdx]
         this.curTokenIdx = (this.curTokenIdx++)%tokens.length
-        // console.log(authorization)
 
 		return new Promise ((resolve,reject) => {
 
@@ -92,16 +90,15 @@ class TelChecker {
                 body : {},
                 json: true,
 			},(error, response, body) => {
-		
-				console.log (body);
+                console.log(body)
 				if (!error) {
 					try {
-						// var info = JSON.parse (body);
 						return resolve (body);
 					} catch (e) {
 						return resolve ({});
 					}
 				} else {
+                    console.log(error)
 					return resolve ({});
 				}
 			})
@@ -110,11 +107,10 @@ class TelChecker {
 	
 	async checkSingle (tel, is35) {
         let info 
-        if (is35)
+        if (is35){
             info = await this.checkAsync2 (tel);
-        else
+        } else
             info = await this.checkAsync (tel);
-		console.log (info);
 		let current = this.state.current ;
 		current ++;
 		this.setState ({current : current});
@@ -163,39 +159,70 @@ class TelChecker {
         }
         if (retrydata.length > 0 && this.retryTimes < 3){
             this.retryTimes ++
-            this.checkBatch(retrydata)
+		    await this.delayTime (5000);
+            await this.checkBatch(retrydata)
         }else{
             this.callback && this.callback (retdata);
         }
-	}
+    }
+    
+	async mergeRetryData (retrydata) {
+        let mobilesMap = {}
+        for(let i in retrydata){
+            mobilesMap[retrydata[i].mobile] = i;//if (retrydata[i].retry != true) 
+        }
+        let length = this.retdata.length
+        for(let i = 0; i<length; i++) {
+            let index = mobilesMap[this.retdata[i].mobile]
+            if (index) {
+                this.retdata[i] = retrydata[index]
+            }
+        }
+    }
 
-	async exportToFile2 () {
-        let alldata = this.alldata || [];
-        let retdata = []
+	async exportToFile2 (dealingData) {
+        let retdata = this.retdata
+        if (this.retryTimes > 0) retdata = []
         let retrydata = []
 
-		for (let i = 0 ;i < alldata.length ; i ++) {
-			let ret = alldata [i];
+		for (let i = 0 ;i < dealingData.length ; i ++) {
+			let ret = dealingData [i];
             let mobile = ret.tel
-            console.log('=========================')
-            console.log(ret)
             if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
+                console.log('======exportToFile2====√====:' + mobile)
                 retdata.push( { mobile, status: "√" })
             } else if (ret && ret.message == "机主状态异常") {
+                console.log('======exportToFile2====未激活====:' + mobile)
                 retdata.push( { mobile, status: "未激活" })
             } else if (ret && ret.message == "此号码不支持换卡") {
+                console.log('======exportToFile2====未激活==1==:' + mobile)
                 retdata.push( { mobile, status: "未激活" })
             } else if (ret && ret.message == "Too Many Attempts.") {
-                retrydata.push( { mobile, retry: true })
+                if (this.retryTimes == 0) 
+                    retdata.push( { mobile, status: "失败", retry: true })
+                retrydata.push(mobile)
+                console.log('======record========retrydata.length:' + retrydata.length)
             } else {
+                console.log('======exportToFile2====失败====:' + mobile)
                 retdata.push( { mobile, ret, status: "失败" })
             }
         }
-        if (retrydata.length > 0 && this.retryTimes < 3){
+
+        //将重试的结果合并到全局的结果里
+        if (this.retryTimes > 0 && retdata.length > 0){
+            this.mergeRetryData(retdata)
+        }
+
+        if (retrydata.length > 0 && this.retryTimes < 3) {
+            console.log('======retry========retrydata.length:' + retrydata.length + ' ===retryTimes:' + this.retryTimes)
             this.retryTimes ++
-            this.checkBatch(retrydata, true)
-        }else{
-            this.callback && this.callback (retdata);
+            console.log('---delayTime-----before-----'+new Date().valueOf())
+            console.log(retrydata)
+            await this.delayTime (40000);
+            console.log('---delayTime-----after-----'+new Date().valueOf())
+            await this.checkBatch(retrydata, true)
+        } else {
+            this.callback && this.callback (this.retdata);
         }
 	}
 
@@ -213,23 +240,28 @@ class TelChecker {
 			}
 		}
 
-		let infos = await Promise.all (promises);
-		this.alldata.push (...infos);
+        let infos = await Promise.all (promises);
+        let dealingdata = this.alldata//请求回来待处理
+        if (this.retryTimes > 0){
+            dealingdata = []
+        } 
+        dealingdata.push (...infos);
 
 		let tellen = telNumbArray.length;
 		if (tellen <= 0) {
-            console.info ("检测完成,正在导出数据");
             if (is35) 
-                this.exportToFile2 ();
+                this.exportToFile2 (dealingdata);
             else
-                this.exportToFile ();
+                this.exportToFile (dealingdata);
 			return ;
-		}
-
-        if (is35) await this.delayTime (8000);
+        }
+        
+        console.log('-checkBatch--delayTime-----before-----'+new Date().valueOf())
+        if (is35) await this.delayTime (60000);
 		else await this.delayTime (5000);
+        console.log('-checkBatch--delayTime-----after-----'+new Date().valueOf())
 
-		this.checkBatch (telNumbArray, is35);
+		await this.checkBatch (telNumbArray, is35);
 	}
 
 	setState (state) {
@@ -565,7 +597,6 @@ tests
 
         // let data = await postAllHanghai(mobiles)
         let data = await getAllHHData(mobiles)
-
         ctx.body = {
             data,
             ret: 0

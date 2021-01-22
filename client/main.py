@@ -46,12 +46,12 @@ class WorkWindow(QMainWindow):
 
         self.statusBar()
 
-        # menubar = self.menuBar()
-        # fileMenu = menubar.addMenu('菜单')
-        # exitAction = QAction('激活码', self)
-        # exitAction.setShortcut('Ctrl+A')
-        # exitAction.triggered.connect(self.onClickActive)
-        # fileMenu.addAction(exitAction)
+        menubar = self.menuBar()
+        fileMenu = menubar.addMenu('菜单')
+        exitAction = QAction('退出', self)
+        exitAction.setShortcut('Ctrl+Q')
+        exitAction.triggered.connect(qApp.quit)
+        fileMenu.addAction(exitAction)
 
         self.list.setColumnCount(2)
         self.list.setRowCount(14)
