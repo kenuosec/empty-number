@@ -155,6 +155,9 @@ export default {
             }, {
                 value: '1',
                 label: '海航'
+            }, {
+                value: '2',
+                label: '河马'
             }],
             typeValue: '0',
             pagesize : 15,

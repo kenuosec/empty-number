@@ -30,7 +30,7 @@ db.findAndCheckExpire = async function(condition) {
         let active_time = parseInt(data.active_time || 0)
         let cur = new Date().valueOf()
         console.log('----findAndCheckExpire----cur:'+cur + "---expire:"+expire)
-        if (active_time <= 0 || (active_time + expire < cur)) return ret
+        if (active_time <= 0 || (active_time + expire > cur)) return ret
     }
     return {}
 }

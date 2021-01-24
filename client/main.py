@@ -5,6 +5,7 @@ import sys
 import json
 import win32api
 import wmi
+from pathlib import Path
 
 from PyQt5.uic import loadUi
 from PyQt5 import QtCore, QtWidgets, Qt
@@ -15,17 +16,21 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment
 import time
 from PyQt5.QtWidgets import *
-# from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QStatusTipEvent
 import hashlib
 
-global hostUrl, productType, marketUrl
-hostUrl = "http://localhost:3000"#测试
-# hostUrl = "http://81.71.124.110:3000"#正式
-productType = 0 #0是三五查询助手，1是海航查询助手
+global hostUrl, productType, marketUrl, gActiveCode
+# hostUrl = "http://localhost:3000"#测试
+hostUrl = "http://81.71.124.110:3000"#正式
+productType = 2 #0是三五查询助手，1是海航查询助手，2是河马查询助手
+productNames = ["三五", "海航", "河马"]
 marketUrl = "http://fk.ttm888.net/"
+gActiveCode = ''
 class WorkWindow(QMainWindow):
     mobiles = None
-    hasFolder = False
+    outputDir = None
+    statusMsg = ''
+    saveMsg = ''
 
     def __init__(self, parent=None):
         super(WorkWindow, self).__init__(parent)
@@ -41,12 +46,15 @@ class WorkWindow(QMainWindow):
         self.btn_check.clicked.connect(self.onClickCheck)
         self.btn_export = self.findChild(QPushButton, "pushButton_export")
         self.btn_export.clicked.connect(self.onClickExport)
-        if productType == 1:
-            self.setWindowTitle('海航查询助手')
-        else:
-            self.setWindowTitle('三五查询助手')
+        title = productNames[productType] + '查询助手'
+        self.setWindowTitle(title)
 
-        self.statusBar()
+        # if productType == 1:
+        #     self.setWindowIcon(QIcon('./app.ico'))
+        if productType == 2:
+            self.setWindowIcon(QIcon('./app.ico'))
+        # else:
+        #     self.setWindowTitle('三五查询助手')
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('菜单')
@@ -74,14 +82,7 @@ class WorkWindow(QMainWindow):
             "QHeaderView::section{background-color:rgb(155, 194, 230);font:11pt '宋体';color: black;};")
 
     def updateTitle(self):
-        self.list.setHorizontalHeaderLabels(['号码', '状态'])#'序号',
-
-    def updateStatusBar(self):
-        all = 0
-        if self.mobiles != None:
-            all = len(self.mobiles)
-        self.statusBar().showMessage('''全部数据：%d''' % all)
-        self.list.setHorizontalHeaderLabels(['号码', '状态'])#'序号',
+        self.list.setHorizontalHeaderLabels(['号码', '状态'])
 
     def onClickJoin(self):
         self.mobiles = None
@@ -98,15 +99,20 @@ class WorkWindow(QMainWindow):
         count = len(arr)
         self.list.setRowCount(count)
         self.mobiles = arr
-        self.updateStatusBar()
+        self.statusMsg = '''全部数据：%d''' % count
+        self.saveMsg = ''
+        self.statusBar().showMessage(self.statusMsg, 0)
         for i in range(count):
             newItem = QTableWidgetItem(arr[i])
             newItem.setTextAlignment(Qt.AlignHCenter|Qt.AlignVCenter)
             self.list.setItem(i, 0, newItem)
 
     def onClickCheck(self):
+        self.saveMsg = ''
         if productType == 1:
             self.onClickCheck2()
+        elif productType == 2:
+            self.onClickCheck3()
         else:
             self.onClickCheck1()
 
@@ -117,7 +123,8 @@ class WorkWindow(QMainWindow):
             return 
 
         self.enableControls(False)
-        self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0''' % len(self.mobiles))
+        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
+        self.statusBar().showMessage(self.statusMsg, 0)
 
         if self.mode == 1 and not self.tokens is None:
             self.postLocal(self.mobiles, self.tokens)
@@ -132,8 +139,25 @@ class WorkWindow(QMainWindow):
             return 
 
         self.enableControls(False)
-        self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0''' % len(self.mobiles))
+        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
+        self.statusBar().showMessage(self.statusMsg, 0)
         url = hostUrl + '/tests/hanghai'
+        self.postCloud(url, self.mobiles, 200)
+
+    def onClickCheck3(self):
+        print(self.mobiles)
+        if self.mobiles is None:
+            QMessageBox.information(self, "Information", "没有可检测的号码")
+            return 
+
+        self.enableControls(False)
+        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
+        self.statusBar().showMessage(self.statusMsg, 0)
+
+        # if self.mode == 1 is None:
+        #     self.postLocal(self.mobiles, self.tokens)
+        # else:
+        url = hostUrl + '/tests/hema'
         self.postCloud(url, self.mobiles, 200)
 
     def onClickExport(self):
@@ -171,27 +195,59 @@ class WorkWindow(QMainWindow):
             # otherStyleTime = time.strftime("%Y年%m月%d日%H时%M分%S秒", timeArray)
             otherStyleTime = time.strftime('%Y{y}%m{m}%d{d}%H{h}%M{M}%S{s}').format(y='年', m='月', d='日', h='时', M='分', s='秒')
             workbook.save('''../%s/%s.xlsx''' % (outDir, otherStyleTime))
-            self.statusBar().showMessage('保存成功')
+            self.saveMsg = '保存成功'
+            msg = self.statusMsg + self.saveMsg 
+            self.statusBar().showMessage(msg, 0)
         except Exception as err:
-            self.statusBar().showMessage('保存失败')
+            self.saveMsg = '保存失败'
+            msg = self.statusMsg + self.saveMsg 
+            self.statusBar().showMessage(msg, 0)
             print(err)
         finally:
             pass
 
-    def mkdir(self, outDir):
-        if not self.hasFolder:
-            curDir = os.getcwd()
-            try:
+    def mkdir1(self, folder):
+        try:
+            os.mkdir(folder)#创建“查询结果”文件夹
+        except Exception as err:
+            print(err)
+        finally:
+            pass
+
+    def mkdir(self, folder):
+        try:
+            if self.outputDir is None:
+                curDir = os.getcwd()#EXE的目录
+                print("-====mkdir==curDir:", curDir)
                 os.chdir("..")
-                os.mkdir(outDir)
-                curDir1 = os.getcwd()+'\\'
-                dir = curDir.replace(curDir1, '', 1)
+                upOutDir = os.getcwd()#EXE的上层目录
+                print("-====mkdir==upOutDir:", upOutDir)
+                self.mkdir1(folder)
+                outputDir = os.getcwd()+'\\'#“查询结果”目录
+                print("-====mkdir==outputDir:", outputDir)
+                dir = curDir.replace(outputDir, '', 1)
+                print("-====mkdir==dir:", dir)
                 os.chdir(dir)
-                self.hasFolder = True
-            except Exception as err:
-                print(err)
-            finally:
-                pass
+                self.outputDir = {
+                    "outputDir" : outputDir,
+                    "upOutDir" : upOutDir,
+                    "folder" : folder,
+                }
+            else:
+                outputDir = Path(self.outputDir['outputDir'])
+                if outputDir.is_dir():
+                    pass
+                else:
+                    print("-====mkdir==is_dir:", curDir)
+                    # upOutDir = self.outputDir['upOutDir']#EXE的上层目录
+                    # os.chdir(upOutDir)
+                    # os.mkdir(folder)#创建“查询结果”文件夹
+                    # outputDir = self.outputDir['outputDir']#“查询结果”目录
+                    # dir = curDir.replace(outputDir, '', 1)
+        except Exception as err:
+            print(err)
+        finally:
+            pass
 
     def enableControls(self, enable):
         # self.list.setEnabled(enable)
@@ -241,9 +297,10 @@ class WorkWindow(QMainWindow):
                         if status == '√':
                             activeNum = activeNum + 1
 
-                self.statusBar().showMessage('''全部数据：%d\t\t   完成条数:%d\t\t   已激活数:%d\t\t   未激活数:%d''' % (count, stepLen, activeNum, stepLen-activeNum))
+                self.statusMsg = '''全部数据：%d\t\t   完成条数:%d\t\t   已激活数:%d\t\t   未激活数:%d\t\t   ''' % (count, stepLen, activeNum, stepLen-activeNum)
+                self.statusBar().showMessage(self.statusMsg, 0)
 
-            elif res['msg']:
+            elif res['msg'] is not None:
                 QMessageBox.information(self, "Information", res['msg'])
             else:
                 QMessageBox.information(self, "Information", "请求失败")
@@ -267,7 +324,10 @@ class WorkWindow(QMainWindow):
             newItem = QTableWidgetItem(status)
             newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
             self.list.setItem(index, 1, newItem)
-        self.updateStatusBar()
+
+        # all = 0
+        # self.statusMsg = '''全部数据：%d''' % all
+        # self.statusBar().showMessage(self.statusMsg, 0)
 
     def postLocalFinish(self, res):
         print("-------postLocalFinish-------")
@@ -282,7 +342,7 @@ class WorkWindow(QMainWindow):
                     newItem.setTextAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
                     self.list.setItem(i, 1, newItem)
                 pass
-        elif res['msg']:
+        elif res['msg'] is not None:
             QMessageBox.information(self, "Information", res['msg'])
         else:
             QMessageBox.information(self, "Information", "登录失败")
@@ -307,6 +367,15 @@ class WorkWindow(QMainWindow):
 
     def gotoMarket(self):
         QDesktopServices.openUrl(QUrl(marketUrl))
+
+    # 此处覆盖父类函数: 克服将鼠标放置于菜单栏上，状态栏就消失的问题；
+    def event(self, QEvent):
+        if QEvent.type() == QEvent.StatusTip:
+            if QEvent.tip() == "":
+                msg = self.statusMsg + self.saveMsg 
+                QEvent = QStatusTipEvent(msg)  # 此处为要始终显示的内容
+        return super().event(QEvent)
+
 
 class CloudThread(QThread):
     sinOut = pyqtSignal(dict, int)
@@ -343,9 +412,12 @@ class CloudThread(QThread):
         while True:
             mobiles = self.split(start)
             ret = {"data": []}
+            global gActiveCode
             try:
                 stringBody = {
                     "mobiles": mobiles,
+                    "code": gActiveCode,
+                    "ptype": productType,
                 }
                 data = json.dumps(stringBody)
                 HEADERS = {
@@ -356,7 +428,13 @@ class CloudThread(QThread):
             except Exception as err:
                 print(err)
             finally:
-                if ret['data']:
+                msg = self.dealError(ret)
+                if msg != '':
+                    fRet = {data:finalRet, "msg": msg, "ret": 1}
+                    self.sinOut.emit(fRet, 0)
+                    return
+
+                if ret['data'] is not None:
                     for info in ret['data']:
                         finalRet.append(info)
 
@@ -370,6 +448,22 @@ class CloudThread(QThread):
                     self.sinOut.emit(fRet, 0)
                     self.working = False
                     break
+        pass
+
+    def dealError(self, result):
+        msg = ''
+        try:
+            if result['ret'] is not None:
+                if result['ret'] != 0:
+                    if result['msg'] is not None:
+                        msg = result['msg']
+                    else:
+                        msg = "请求错误"
+                pass
+            else:
+                msg = "请求错误"
+        finally:
+            return msg
 
 class LocalThread(QThread):
     sinOut = pyqtSignal(dict)
@@ -422,17 +516,17 @@ class LoginWindow(QtWidgets.QMainWindow):
         MainWindow.resize(278, 108)
         MainWindow.setFixedSize(MainWindow.width(), MainWindow.height())
 
-        # MainWindow.setWindowIcon(QIcon('logo.png'))
+        MainWindow.setWindowIcon(QIcon('./app.ico'))
         # MainWindow.setStyleSheet("background-image:url(Background.jpg)")
         self.centralWidget = QtWidgets.QWidget(MainWindow)
         self.centralWidget.setObjectName("centralWidget")
         self.label1 = QtWidgets.QLabel(self.centralWidget)
-        self.label1.setGeometry(QtCore.QRect(70, 50, 141, 16))
+        self.label1.setGeometry(QtCore.QRect(70, 40, 141, 16))
         self.label1.setStyleSheet("font:9pt '楷体'; color: rgb(255, 0, 0);")
         self.label1.setTextFormat(QtCore.Qt.AutoText)
         self.label1.setObjectName("label1")
         self.lineEdit = QtWidgets.QLineEdit(self.centralWidget)
-        self.lineEdit.setGeometry(QtCore.QRect(72, 30, 141, 20))
+        self.lineEdit.setGeometry(QtCore.QRect(72, 20, 141, 20))
         self.lineEdit.setText("")
         self.lineEdit.setObjectName("lineEdit")
         self.label = QtWidgets.QLabel(self.centralWidget)
@@ -456,7 +550,8 @@ class LoginWindow(QtWidgets.QMainWindow):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "请登录"))
+        title = productNames[productType] + '查询助手'
+        MainWindow.setWindowTitle(_translate("MainWindow", title))
         self.lineEdit.setPlaceholderText(_translate("MainWindow", "请输入激活码"))
         self.label.setText(_translate("MainWindow", "正在登录，请稍候..."))
         # self.label1.setText(_translate("MainWindow", "激活码无效或已过期"))
@@ -553,7 +648,10 @@ class LoginWindow(QtWidgets.QMainWindow):
         print("-------onLoginFinish-------", ret)
         try:
             if ret['ret'] == 0:
-                self.saveCode(ret['code'])
+                code = ret['code']
+                global gActiveCode
+                gActiveCode = code
+                self.saveCode(code)
                 MainWindow.close()
                 work.show()
             else:

@@ -50,10 +50,13 @@ codes
             let data = []
             for (let i in set){
                 let expire = parseInt(set[i].expire)
-                if (expire < 1000000000 && expire >=3600000) {
+                if (expire < 1011333842000 && expire >=3600000) {
                     let date = (expire == 3600000)?'1 小时':((expire/(24*3600000)).toFixed(0) + " 天") 
                     let ptype = parseInt(set[i].ptype)
-                    data.push({code:set[i].code, expire, date, typeName:(ptype==1)?"海航":"三五"})
+                    let typeName = "三五"
+                    if (ptype == 1) typeName = "海航"
+                    else if (ptype == 1) typeName = "河马"
+                    data.push({code:set[i].code, expire, date, typeName})
                 }
             }
             ctx.body = {
@@ -106,8 +109,16 @@ codes
             };
         }
     })
-    .get('/', async (ctx) => {
-        await database.drop()
-    })
+    // .get('/', async (ctx) => {
+    //     await database.drop()
+    // })
+    .get('/chaxun', async (ctx) => {
+        let code = ctx.query.code || '';
 
+        let data = await database.find({code})
+        ctx.body = {
+            data,
+            ret: 0
+        };
+    })
 module.exports = codes
