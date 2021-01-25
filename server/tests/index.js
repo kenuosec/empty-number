@@ -5,6 +5,18 @@ const Router = require('koa-router');
 const JSEncrypt = require('node-jsencrypt');
 const request = require('request');
 const fs = require('fs');
+
+// let options = {
+//   flags: 'a',     // append模式
+//   encoding: 'utf8',  // utf8编码
+// };
+ 
+// let stdout = fs.createWriteStream('./stdout.log', options);
+// let stderr = fs.createWriteStream('./stderr.log', options);
+ 
+// 创建logger
+let logger = console//new console.Console(options);
+ 
 const TYPE_35 = 0
 const TYPE_HAIHANG = 1
 const TYPE_HEMA = 2
@@ -73,20 +85,25 @@ class TelChecker {
 		})
 	}
 
-    async check35Async (telNo) {
+    async check35Async (telNo, isCheck) {
 		telNo = parseInt (telNo) || 0;
 	
 		if (!telNo) {
 			return Promise.resolve ({})
 		}
-        var url = joinParams(`https://swszxcx.35sz.net/api/v1/card-replacement/query`, { mobile:telNo });
+        var url
+        if (isCheck) {
+            url = joinParams(`https://swszxcx.35sz.net/api/v1/transfer/query`, { mobile:telNo, password:"123456"});
+        } else {
+            url = joinParams(`https://swszxcx.35sz.net/api/v1/card-replacement/query`, { mobile:telNo});
+        }
         let authorization = tokens[curTokenIdx]
         curTokenIdx++
         curTokenIdx = curTokenIdx%tokens.length
 
-		return new Promise ((resolve,reject) => {
+		return new Promise ((resolve, reject) => {
 
-			request.post (url,{
+			request.post (url, {
 				headers : {
                     "Authorization": authorization,
                     'content-type': 'application/json',
@@ -94,7 +111,7 @@ class TelChecker {
                 body : {},
                 json: true,
 			},(error, response, body) => {
-                // console.log(body)
+                logger.log(body)
 				if (!error) {
 					try {
 						return resolve (body);
@@ -102,7 +119,7 @@ class TelChecker {
 						return resolve ({});
 					}
 				} else {
-                    console.log(error)
+                    logger.log(error)
 					return resolve ({});
 				}
 			})
@@ -118,7 +135,7 @@ class TelChecker {
         var url = joinParams(`http://wx.hippocom.com.cn/wxtomcat/businesshandling/validatePhoneNoRecharge.do`, { phoneNum:telNo });
 		return new Promise ((resolve,reject) => {
 			request.get (url, (error, response, body) => {
-                console.log(body)
+                // logger.log(body)
 				if (!error) {
 					try {
 						return resolve ({ret:body});
@@ -126,7 +143,7 @@ class TelChecker {
 						return resolve ({});
 					}
 				} else {
-                    console.log(error)
+                    logger.log(error)
 					return resolve ({});
 				}
 			})
@@ -135,19 +152,28 @@ class TelChecker {
 	
 	async checkSingle (tel, reqType) {
         let info 
-        if (reqType == TYPE_35){
-            info = await this.check35Async (tel);
+        if (reqType == TYPE_35) {
+            info = await this.check35Async(tel, false);
+
+            if (typeof info == "string") {//请求总数太多会返回502页面内容
+                info = {tel, message : "Too Many Attempts."}
+            } else if (info.message == "机主状态异常") {
+                let info1 = await this.check35Async(tel, true);
+                if (info1.message == "服务密码不正确") {
+                    info.session_id = '1'
+                    info.step = 'UPLOAD_IMAGES'
+                } else if (info1.step == "VERIFY_ICCID" && info1.session_id) {
+                    // info.message = ''//还是‘机主状态异常’
+                } else {
+                    console.log('checkSingle-TYPE_35-tel:'+ tel+'-message:'+info.message)
+                }
+            }
         } else if (reqType == TYPE_HAIHANG) {
             info = await this.checkHaiHangAsync (tel);
         } else if (reqType == TYPE_HEMA) {
             info = await this.checkHeMaAsync (tel);
         }
-		let current = this.state.current ;
-		current ++;
-        this.setState ({current : current});
-        if (typeof info == "string" && reqType == TYPE_35) //请求总数太多会返回502页面内容
-            info = {tel, message : "Too Many Attempts."}
-		else info.tel = tel;
+		info.tel = tel;
 		return Promise.resolve (info)
 	}
     
@@ -187,7 +213,7 @@ class TelChecker {
             }else if (info.data && info.data.RESULT == '03') {
                 retdata.push({mobile:info.tel, status : '未激活'})
             }else {
-                console.log('---exportHaiHang----1111----:'+this.retryTimes)
+                logger.log('---exportHaiHang----1111----:'+this.retryTimes)
                 if (this.retryTimes == 0) 
                     retdata.push( { mobile, status: "失败", retry: true })
                 retrydata.push(info.tel)
@@ -200,8 +226,9 @@ class TelChecker {
         }
         if (retrydata.length > 0 && this.retryTimes < 3){
             this.retryTimes ++
-		    await this.delayTime (5000);
-            await this.checkBatch(retrydata)
+            let delay = delay_between_request[TYPE_HAIHANG]
+		    await this.delayTime (delay);
+            await this.checkBatch(retrydata, TYPE_HAIHANG)
         }else{
             this.callback && this.callback (this.retdata);
         }
@@ -239,9 +266,9 @@ class TelChecker {
                 if (this.retryTimes == 0) 
                     retdata.push( { mobile, status: "失败", retry: true })
                 retrydata.push(mobile)
-                console.log('======record========retrydata.length:' + retrydata.length)
+                logger.log('======record========retrydata.length:' + retrydata.length)
             } else {
-                console.log('======export35====失败====:' + mobile)
+                logger.log('======export35====失败====:' + mobile)
                 retdata.push( { mobile, ret, status: "失败" })
             }
         }
@@ -255,7 +282,7 @@ class TelChecker {
             this.retryTimes ++
             let delay = delay_between_request[TYPE_35]
             await this.delayTime (delay);
-            await this.checkBatch(retrydata, true)
+            await this.checkBatch(retrydata, TYPE_35)
         } else {
             this.callback && this.callback (this.retdata);
         }
@@ -273,10 +300,10 @@ class TelChecker {
             if (this.retryTimes == 0) 
                 retdata.push( { mobile, status: "失败", retry: true })
             retrydata.push(mobile)
-            console.log('======record========retrydata.length:' + retrydata.length)
+            logger.log('======record========retrydata.length:' + retrydata.length)
         } else {
-            console.log('======export35====失败====:' + mobile)
-            retdata.push( { mobile, ret, status: "失败" })
+            logger.log('======deal35RetData====失败====:' + mobile)
+            retdata.push({ mobile, ret, status: "失败" })
         }
     }
 
@@ -287,7 +314,7 @@ class TelChecker {
         }else if (info.data && info.data.RESULT == '03') {
             retdata.push({mobile, status : '未激活'})
         }else {
-            console.log('---exportHaiHang----1111----:'+this.retryTimes)
+            logger.log('---exportHaiHang----1111----:'+this.retryTimes)
             if (this.retryTimes == 0) 
                 retdata.push( { mobile, status: "失败", retry: true })
             retrydata.push(info.tel)
@@ -295,7 +322,7 @@ class TelChecker {
     }
 
 	async dealHeMaRetData (info, retdata, retrydata) {
-        console.log(info)
+        logger.log(info)
         let mobile = info.tel
 
         if (info.ret == '1' || info.ret == '') {
@@ -333,7 +360,7 @@ class TelChecker {
             this.retryTimes ++
             let delay = delay_between_request[reqType]
             await this.delayTime (delay);
-            await this.checkBatch(retrydata, true)
+            await this.checkBatch(retrydata, reqType)
         } else {
             this.callback && this.callback (this.retdata);
         }
@@ -359,6 +386,8 @@ class TelChecker {
             dealingdata = []
         } 
         dealingdata.push (...infos);
+        console.log('====================dealingdata=')
+        console.log(infos)
 		let tellen = telNumbArray.length;
 		if (tellen <= 0) {
             this.exportData (dealingdata, reqType);
@@ -369,10 +398,6 @@ class TelChecker {
         if (delay) await this.delayTime (delay);
 
 		await this.checkBatch (telNumbArray, reqType);
-	}
-
-	setState (state) {
-
 	}
 }
 
@@ -445,7 +470,7 @@ async function post(mobile, token) {
     let url = `https://swszxcx.35sz.net/api/v1/card-replacement/query`
     let params = { mobile }
     let ret = await httpRequest(url, params, {}, token)
-    console.log(ret)
+    logger.log(ret)
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return mobile + "   √"
     } else if (ret && ret.message == "机主状态异常") {
@@ -464,7 +489,7 @@ async function post1(mobile, token) {
     let url = `https://swszxcx.35sz.net/api/v1/card-replacement/query`
     let params = { mobile }
     let ret = await httpRequest(url, params, {}, token)
-    console.log(ret)
+    logger.log(ret)
     if (ret && ret.step == "UPLOAD_IMAGES" && ret.session_id) {
         return { mobile, status: "√" }
     } else if (ret && ret.message == "机主状态异常") {
@@ -497,20 +522,20 @@ async function postAll(mobiles, mode) {
             ret = await post(mobile, token)
 
         if (typeof ret == "string") {
-            console.log('--------00-------' + i)
+            logger.log('--------00-------' + i)
             data[i] = ret
         } else if (ret.retry) {
             retrys[retrys.length] = { mobile, index: i }
             data[i] = "retry"
-            console.log('--------retrys.length:' + retrys.length)
+            logger.log('--------retrys.length:' + retrys.length)
         } else {
-            console.log('--------11-------' + i)
+            logger.log('--------11-------' + i)
             data[i] = ret
         }
     }
 
     let i = 0
-    console.log('--------retrys begin-------length:' + retrys.length)
+    logger.log('--------retrys begin-------length:' + retrys.length)
     while (i < retrys.length) {
         if (i % interval == 0) await delay(5000)
         let index = retrys[i].index
@@ -524,16 +549,16 @@ async function postAll(mobiles, mode) {
 
         if (typeof ret == "string") {
             data[index] = ret
-            console.log('--------0-------' + index)
+            logger.log('--------0-------' + index)
         } else if (ret.retry) {
             retrys[retrys.length] = { mobile, index }
-            console.log('--------retrys.length-------' + retrys.length)
+            logger.log('--------retrys.length-------' + retrys.length)
         } else {
-            console.log('--------1-------' + index)
+            logger.log('--------1-------' + index)
             data[index] = ret
         }
         i++;
-        console.log('--------retrys.length-------i:' + i + "====retrys.length:" + retrys.length)
+        logger.log('--------retrys.length-------i:' + i + "====retrys.length:" + retrys.length)
     }
     return data
 }
@@ -591,19 +616,19 @@ async function postAllHanghai(mobiles, mode) {
         if (ret.retry) {
             retrys[retrys.length] = { mobile, index: i }
             data[i] = "retry"
-            console.log('--------retrys.length-------' + retrys.length)
+            logger.log('--------retrys.length-------' + retrys.length)
         } else if (ret.info) {
-            console.log('--------00----error---' + i)
-            console.log(ret.info)
+            logger.log('--------00----error---' + i)
+            logger.log(ret.info)
             data[i] = ret
         } else {
-            console.log('--------11-------' + i)
+            logger.log('--------11-------' + i)
             data[i] = ret
         }
     }
 
     let i = 0
-    console.log('--------retrys.length-------' + retrys.length)
+    logger.log('--------retrys.length-------' + retrys.length)
     while (i < retrys.length) {
         if (i % interval == 0) await delay(5000)
         let index = retrys[i].index
@@ -613,16 +638,16 @@ async function postAllHanghai(mobiles, mode) {
 
         if (typeof ret == "string") {
             data[index] = ret
-            console.log('--------0-------' + index)
+            logger.log('--------0-------' + index)
         } else if (ret.retry) {
             retrys[retrys.length] = { mobile, index }
-            console.log('--------retrys.length-------' + retrys.length)
+            logger.log('--------retrys.length-------' + retrys.length)
         } else {
-            console.log('--------1-------' + index)
+            logger.log('--------1-------' + index)
             data[index] = ret
         }
         i++;
-        console.log('--------retrys.length-------i:' + i + "====retrys.length:" + retrys.length)
+        logger.log('--------retrys.length-------i:' + i + "====retrys.length:" + retrys.length)
     }
     return data
 }
@@ -654,7 +679,7 @@ tests
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0');
         let mobiles = ctx.request.body.mobiles || '';//post
-        console.log(mobiles)
+        logger.log(mobiles)
 
         let set = await database.findAndCheckExpire({code, ptype})
         if (! (set && set._id)) {
@@ -684,13 +709,13 @@ tests
         }
     })
     .post('/api', async (ctx) => {
-        console.log(ctx.request.body)
+        logger.log(ctx.request.body)
         let md5 = ctx.request.body.md5 || '';
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0');
 
         let set = await database.findAndCheckExpire({code, ptype})
-        console.log(set)
+        logger.log(set)
 
         if (set.length > 0) {
             ctx.body = {
@@ -710,7 +735,7 @@ tests
         let ptype = parseInt(ctx.request.body.ptype || '0');
         let mobiles = ctx.request.body.mobiles || '';//post
         // let mobiles = (ctx.query.mobiles || '').split(',');//get
-        console.log(mobiles)
+        logger.log(mobiles)
 
         let set = await database.findAndCheckExpire({code, ptype})
         if (!(set && set._id)) {
@@ -744,7 +769,7 @@ tests
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0');
         let mobiles = ctx.request.body.mobiles || '';//post
-        console.log(mobiles)
+        logger.log(mobiles)
 
         // let set = await database.findAndCheckExpire({code, ptype})
         // if (!(set && set._id)) {

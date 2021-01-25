@@ -55,7 +55,7 @@ codes
                     let ptype = parseInt(set[i].ptype)
                     let typeName = "三五"
                     if (ptype == 1) typeName = "海航"
-                    else if (ptype == 1) typeName = "河马"
+                    else if (ptype == 2) typeName = "河马"
                     data.push({code:set[i].code, expire, date, typeName})
                 }
             }

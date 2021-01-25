@@ -19,13 +19,15 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QStatusTipEvent
 import hashlib
 
-global hostUrl, productType, marketUrl, gActiveCode
-# hostUrl = "http://localhost:3000"#测试
-hostUrl = "http://81.71.124.110:3000"#正式
-productType = 2 #0是三五查询助手，1是海航查询助手，2是河马查询助手
+# global hostUrl, productType, marketUrl, gActiveCode, gCurVersion, gSvrVersion
+hostUrl = "http://localhost:3000"#测试
+# hostUrl = "http://81.71.124.110:3000"#正式
+productType = 0 #0是三五查询助手，1是海航查询助手，2是河马查询助手
 productNames = ["三五", "海航", "河马"]
-marketUrl = "http://fk.ttm888.net/"
+marketUrl = "https://fk.ttm888.net/"
 gActiveCode = ''
+gCurVersion = 1
+gSvrVersion = 1
 class WorkWindow(QMainWindow):
     mobiles = None
     outputDir = None
@@ -49,15 +51,21 @@ class WorkWindow(QMainWindow):
         title = productNames[productType] + '查询助手'
         self.setWindowTitle(title)
 
-        # if productType == 1:
-        #     self.setWindowIcon(QIcon('./app.ico'))
-        if productType == 2:
-            self.setWindowIcon(QIcon('./app.ico'))
-        # else:
-        #     self.setWindowTitle('三五查询助手')
+        self.setWindowIcon(QIcon('./app.ico'))
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('菜单')
+        try:
+            if gCurVersion <= gSvrVersion:
+                updtAction = QAction('更新', self)
+                updtAction.triggered.connect(self.gotoUpdate)
+                fileMenu.addAction(updtAction)
+        except Exception as err:
+            print(err)
+            pass
+        finally:
+            pass
+
         exitAction = QAction('退出', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.triggered.connect(qApp.quit)
@@ -109,6 +117,15 @@ class WorkWindow(QMainWindow):
 
     def onClickCheck(self):
         self.saveMsg = ''
+        print(self.mobiles)
+        if self.mobiles is None:
+            QMessageBox.information(self, "Information", "没有可检测的号码")
+            return 
+
+        self.enableControls(False)
+        self.statusMsg = '''全部数据：%d\t\t   查询中...\t\t   ''' % len(self.mobiles)
+        self.statusBar().showMessage(self.statusMsg, 0)
+
         if productType == 1:
             self.onClickCheck2()
         elif productType == 2:
@@ -117,15 +134,6 @@ class WorkWindow(QMainWindow):
             self.onClickCheck1()
 
     def onClickCheck1(self):
-        print(self.mobiles)
-        if self.mobiles is None:
-            QMessageBox.information(self, "Information", "没有可检测的号码")
-            return 
-
-        self.enableControls(False)
-        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
-        self.statusBar().showMessage(self.statusMsg, 0)
-
         if self.mode == 1 and not self.tokens is None:
             self.postLocal(self.mobiles, self.tokens)
         else:
@@ -133,27 +141,10 @@ class WorkWindow(QMainWindow):
             self.postCloud(url, self.mobiles, 60*2)
 
     def onClickCheck2(self):
-        print(self.mobiles)
-        if self.mobiles is None:
-            QMessageBox.information(self, "Information", "没有可检测的号码")
-            return 
-
-        self.enableControls(False)
-        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
-        self.statusBar().showMessage(self.statusMsg, 0)
         url = hostUrl + '/tests/hanghai'
         self.postCloud(url, self.mobiles, 200)
 
     def onClickCheck3(self):
-        print(self.mobiles)
-        if self.mobiles is None:
-            QMessageBox.information(self, "Information", "没有可检测的号码")
-            return 
-
-        self.enableControls(False)
-        self.statusMsg = '''全部数据：%d\t\t   完成条数:0\t\t   已激活数:0\t\t   未激活数:0\t\t   ''' % len(self.mobiles)
-        self.statusBar().showMessage(self.statusMsg, 0)
-
         # if self.mode == 1 is None:
         #     self.postLocal(self.mobiles, self.tokens)
         # else:
@@ -367,6 +358,10 @@ class WorkWindow(QMainWindow):
 
     def gotoMarket(self):
         QDesktopServices.openUrl(QUrl(marketUrl))
+
+    def gotoUpdate(self):
+        url = marketUrl + ('''update?t=%d''' % productType)
+        QDesktopServices.openUrl(QUrl(url))
 
     # 此处覆盖父类函数: 克服将鼠标放置于菜单栏上，状态栏就消失的问题；
     def event(self, QEvent):
@@ -699,9 +694,18 @@ class LoginThread(QThread):
         self.code = code
         self.md5 = md5
 
+    def getVerver(self, ret):
+        try:
+            gSvrVersion = ret['version']
+        except Exception as err:
+            print(err)
+        finally:
+            pass
+
     def run(self):
         ret = -1
         msg = ''
+        gSvrVersion = gCurVersion
         try:
             stringBody = {
                 "md5": self.md5,
@@ -721,7 +725,8 @@ class LoginThread(QThread):
                 print('login ret:', ret)
             else:
                 msg = d['msg']
-                pass
+
+            self.getVerver(d)
         except Exception as err:
             print(err)
             msg = '网络错误'
