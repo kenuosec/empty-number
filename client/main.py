@@ -20,9 +20,9 @@ from PyQt5.QtGui import QIcon, QStatusTipEvent
 import hashlib
 
 # global hostUrl, productType, marketUrl, gActiveCode, gCurVersion, gSvrVersion
-hostUrl = "http://localhost:3000"#测试
-# hostUrl = "http://81.71.124.110:3000"#正式
-productType = 0 #0是三五查询助手，1是海航查询助手，2是河马查询助手
+# hostUrl = "http://localhost:3000"#测试
+hostUrl = "http://81.71.124.110:3000"#正式
+productType = 2 #0是三五查询助手，1是海航查询助手，2是河马查询助手
 productNames = ["三五", "海航", "河马"]
 marketUrl = "https://fk.ttm888.net/"
 gActiveCode = ''
@@ -55,16 +55,12 @@ class WorkWindow(QMainWindow):
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('菜单')
-        try:
-            if gCurVersion <= gSvrVersion:
-                updtAction = QAction('更新', self)
-                updtAction.triggered.connect(self.gotoUpdate)
-                fileMenu.addAction(updtAction)
-        except Exception as err:
-            print(err)
-            pass
-        finally:
-            pass
+
+        # updtAction = QAction('更新', self)
+        # updtAction.triggered.connect(self.gotoUpdate)
+        # fileMenu.addAction(updtAction)
+        # updtAction.setEnabled(False)
+        # self.updtAction = updtAction
 
         exitAction = QAction('退出', self)
         exitAction.setShortcut('Ctrl+Q')

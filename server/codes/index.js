@@ -76,6 +76,7 @@ codes
         let code = ctx.request.body.code || '';
         let ptype = parseInt(ctx.request.body.ptype || '0')
         console.log("active code:" + code + "-ptype:" + ptype)
+        let version = 2
 
         let set = await database.findAndCheckExpire({code, ptype})
         console.log('set=========>')
@@ -94,17 +95,20 @@ codes
                 }
                 ctx.body = {
                     ret: 0,
+                    version,
                     code: code,
                 };
             } else {
                 ctx.body = {
                     ret: 1,
+                    version,
                     msg: "激活码已在其他机器上激活",
                 };
             }
         } else {
             ctx.body = {
                 ret: 1,
+                version,
                 msg: "激活码不存在或已过期",
             };
         }
