@@ -13,6 +13,19 @@ login
         let token = "12345"//TODO
         ctx.body = {
             token,
+            typeOptions: [{
+                value: '0',
+                label: '三五'
+            }, {
+                value: '1',
+                label: '海航'
+            }, {
+                value: '2',
+                label: '河马'
+            }, {
+                value: '4',
+                label: '北纬'
+            }],
             ret:0
         };
     } else {

@@ -71,7 +71,7 @@
             <!-- 编辑弹框 -->
             <el-dialog title="生成激活码" :visible.sync="dialogFormVisible" :lock-scroll='true' :close-on-click-modal='false' width="450px" @close='closeDialog' center>
             <el-form>
-                <el-form-item label="有效期" label-width="110px">
+                <el-form-item label="有效期" label-width="70px">
                     <el-input
                             type="text"
                             v-model="expireDate"
@@ -84,7 +84,7 @@
                         :picker-options="pickerOptions">
                     </el-date-picker> -->
                 </el-form-item>
-                <el-form-item label="类型" label-width="110px">
+                <el-form-item label="类型" label-width="70px">
                     <el-select v-model="typeValue" placeholder="请选择">
                         <el-option
                             v-for="item in typeOptions"
@@ -149,16 +149,7 @@ export default {
             codeTips1:"",
             needFresh:false,
 
-            typeOptions: [{
-                value: '0',
-                label: '三五'
-            }, {
-                value: '1',
-                label: '海航'
-            }, {
-                value: '2',
-                label: '河马'
-            }],
+            typeOptions: [],
             typeValue: '0',
             pagesize : 15,
             currpage: 1,
@@ -176,6 +167,8 @@ export default {
                         if (res && res.data && res.data.ret == 0){
                             this.notLogined = false;
                             this.token = res.data.token
+                            if (res.data.typeOptions)
+                                this.typeOptions = res.data.typeOptions
                             this.requestCodes();
                             this.$message({
                                 message: "登录成功",
@@ -229,8 +222,11 @@ export default {
             this.$http.post("codes/create", data).then((res) => {
                 if (res && res.data && res.data.data) {
                     let code = res.data.data.code
-                    let expire = res.data.data.expire
-                    this.codeTips = '生成成功，激活码: ' + code +  "     有效期:"+expire+"天"
+                    let expire = parseInt(res.data.data.expire)
+                    let time = '1小时'
+                    if (expire > 3600000) time = expire/(24*3600000 ) + "天"
+
+                    this.codeTips = '生成成功，激活码: ' + code +  "     有效期:" + time
                     this.codeTips1 = ''
                     this.needFresh = true
                 } else {
