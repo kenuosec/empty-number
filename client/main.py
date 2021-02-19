@@ -22,8 +22,9 @@ import hashlib
 # global hostUrl, productType, marketUrl, gActiveCode, gCurVersion, gSvrVersion
 # hostUrl = "http://localhost:3000"#测试
 hostUrl = "http://81.71.124.110:3000"#正式
-productType = 4 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手
-productNames = ["三五", "海航", "河马", "", "北纬"]
+productType = 0 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手, 5是三五查询助手(补卡接口)
+apiType = 1 #0是充值接口， 1是补卡接口
+productNames = ["三五", "海航", "河马", "", "北纬", "三五"]
 marketUrl = "https://fk.ttm888.net/"
 gActiveCode = ''
 gCurVersion = 1
@@ -49,6 +50,8 @@ class WorkWindow(QMainWindow):
         self.btn_export = self.findChild(QPushButton, "pushButton_export")
         self.btn_export.clicked.connect(self.onClickExport)
         title = productNames[productType] + '查询助手'
+        if productType == 0 and apiType == 1:
+            title = title + "2.0"
         self.setWindowTitle(title)
 
         self.setWindowIcon(QIcon('./app.ico'))
@@ -128,7 +131,7 @@ class WorkWindow(QMainWindow):
             self.onClickCheck3()
         elif productType == 4:
             self.onClickCheck4()
-        else:
+        else: #0或者5都是35用的
             self.onClickCheck1()
 
     def onClickCheck1(self):
@@ -136,6 +139,8 @@ class WorkWindow(QMainWindow):
             self.postLocal(self.mobiles, self.tokens)
         else:
             url = hostUrl + '/tests'
+            if apiType == 1:
+                url = url + "/notcharge"
             self.postCloud(url, self.mobiles, 60*2)
 
     def onClickCheck2(self):
@@ -151,7 +156,7 @@ class WorkWindow(QMainWindow):
 
     def onClickCheck4(self):
         url = hostUrl + '/tests/beiwei'
-        self.postCloud(url, self.mobiles, 200)
+        self.postCloud(url, self.mobiles, 100)
 
     def onClickExport(self):
         # self.checkdData = self.mobiles
@@ -362,7 +367,7 @@ class WorkWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl(marketUrl))
 
     def gotoUpdate(self):
-        url = marketUrl + ('''update?t=%d''' % productType)
+        url = marketUrl + ('''update?t=%d&apiType%d''' % productType, apiType)
         QDesktopServices.openUrl(QUrl(url))
 
     # 此处覆盖父类函数: 克服将鼠标放置于菜单栏上，状态栏就消失的问题；
@@ -415,6 +420,7 @@ class CloudThread(QThread):
                     "mobiles": mobiles,
                     "code": gActiveCode,
                     "ptype": productType,
+                    "atype": apiType,
                 }
                 data = json.dumps(stringBody)
                 HEADERS = {
@@ -548,6 +554,8 @@ class LoginWindow(QtWidgets.QMainWindow):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         title = productNames[productType] + '查询助手'
+        if productType == 0 and apiType == 1:
+            title = title + "2.0"
         MainWindow.setWindowTitle(_translate("MainWindow", title))
         self.lineEdit.setPlaceholderText(_translate("MainWindow", "请输入激活码"))
         self.label.setText(_translate("MainWindow", "正在登录，请稍候..."))
@@ -713,6 +721,7 @@ class LoginThread(QThread):
                 "md5": self.md5,
                 "code": self.code,
                 "ptype": productType,
+                "atype": apiType,
             }
             data = json.dumps(stringBody)
             HEADERS = {

@@ -1,4 +1,3 @@
-const koa2Req = require('koa2-request')
 const database = require('../database');
 
 const Router = require('koa-router');
@@ -6,6 +5,10 @@ const JSEncrypt = require('node-jsencrypt');
 const request = require('request');
 const fs = require('fs');
 const iconv = require('iconv-lite');
+
+const CryptoJS = require('crypto-js');
+
+const keyHex = CryptoJS.enc.Utf8.parse('dic12345678');
 
 // let options = {
 //   flags: 'a',     // append模式
@@ -23,23 +26,19 @@ const TYPE_HAIHANG = 1
 const TYPE_HEMA = 2
 const TYPE_35_2 = 3//35出现机主的二次验证
 const TYPE_BEIWEI = 4
+const TYPE_35_NEW = 5//35充值接口
 let delay_between_request = [60000, 5000, 5000, 60000]
 
 let curTokenIdx = 0
 let tokens = [
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NTc1MzcsImV4cCI6MTYxMzYyMTUzNywibmJmIjoxNjEyNzU3NTM3LCJqdGkiOiI3aGVEUk15TkJvb0RrM3Y2Iiwic3ViIjoyNDY5OTIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.o4wj6m3bb6XuWsXRrPnLa4ByBbyFVLtrKrogg-Wxl9k",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NTgxMDQsImV4cCI6MTYxMzYyMjEwNCwibmJmIjoxNjEyNzU4MTA0LCJqdGkiOiJTV3pzMGpXajg5eU9iSjdXIiwic3ViIjoyNTc5NDUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.Flmr_Cawsm4WCjsewE-Ee4HRSbCfT0V98R_WrLsC06Q",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NTg1MTUsImV4cCI6MTYxMzYyMjUxNSwibmJmIjoxNjEyNzU4NTE1LCJqdGkiOiJJQjN4cGo1U3ZmVUVibUdlIiwic3ViIjoyNTc5NTUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.sD44zwQK1FnWC7L0JRT1GKEPOISw0y-f_XDaA7N083A",    
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NTkzMTgsImV4cCI6MTYxMzYyMzMxOCwibmJmIjoxNjEyNzU5MzE4LCJqdGkiOiIzZktReWVmanJFcXN5MUhqIiwic3ViIjoyNTc5NzMsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.O0a_baI8gCzMSfBFrjcNG7I-QQ1gOemrwuLxvnvaleE",
-
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjIxOTUsImV4cCI6MTYxMzYyNjE5NSwibmJmIjoxNjEyNzYyMTk1LCJqdGkiOiI3ZG5ZaVJRbW1ZTnd0OUZtIiwic3ViIjoyMzM3MDYsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.9cLa1Hkzi3an54CnRMKQSUlX_y-9fZBPMRWJfOFuDAQ",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjIzOTEsImV4cCI6MTYxMzYyNjM5MSwibmJmIjoxNjEyNzYyMzkxLCJqdGkiOiI4d29HTzdKZFBkVGhYWkZlIiwic3ViIjoyNDY5OTQsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.x_u-gr2IWM5U4Gq4QslitJP4b--rpa8_yKrlPYxKfGI",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjI1MzYsImV4cCI6MTYxMzYyNjUzNiwibmJmIjoxNjEyNzYyNTM2LCJqdGkiOiI0d0VVTzRYMHpJSXdBeFEyIiwic3ViIjoyNDY5OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.gWTYV7YELUAw6PAW3cAab1vF20kP_sK44n9k8TeTVuI",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjI3NDIsImV4cCI6MTYxMzYyNjc0MiwibmJmIjoxNjEyNzYyNzQyLCJqdGkiOiJmSlNmWWdLV1BlejRFdVlzIiwic3ViIjoyMjE2MDIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.Au3PJS7ouzboEom563VvmjJbrpqNl5rZPN8tO0vinqE",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjMwMTIsImV4cCI6MTYxMzYyNzAxMiwibmJmIjoxNjEyNzYzMDEyLCJqdGkiOiJTTTlmSWU0V0JFSThSU3IwIiwic3ViIjoyMzQ1OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.RbFpFLC_oeTx6AAjPgofMHfoha-8TfyKZc-fYk9qfZA",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjMzNjAsImV4cCI6MTYxMzYyNzM2MCwibmJmIjoxNjEyNzYzMzYwLCJqdGkiOiJ4MG9tRklNdzJrMnlMa2wyIiwic3ViIjoxOTExNDgsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.7_Bsr2hdLt6WPHfJXtPegPKOmnboCpxZZAyPRhoX3DM",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjM1MjAsImV4cCI6MTYxMzYyNzUyMCwibmJmIjoxNjEyNzYzNTIwLCJqdGkiOiJ0ZWI0N3lBMmFYa2MwUVVOIiwic3ViIjoyMzQ2MDEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.utbeT6IlepmuAlZN0eq-4Tm5D8CUq4OC_eWSIboiq2k",
-    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTI3NjM5ODEsImV4cCI6MTYxMzYyNzk4MSwibmJmIjoxNjEyNzYzOTgxLCJqdGkiOiI2eWJuREU4bUp6UFg5UnVUIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.U6o2YFfaSWDlwDidcJNalv5YHuWk3JVlENFeGTAqAvg",    // "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTE4NDc5MTcsImV4cCI6MTYxMjcxMTkxNywibmJmIjoxNjExODQ3OTE3LCJqdGkiOiIwUTZMdnlhYkF2bmRHaGRYIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.j3I7R4BMMw9YyNuelJNtfnsnOk1_BNxjgRxG4DiZUzY",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NTkyMTYsImV4cCI6MTYxNDUyMzIxNiwibmJmIjoxNjEzNjU5MjE2LCJqdGkiOiJXUEZPaGNTQjZCNnFoRVlVIiwic3ViIjoyMzM3MDYsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.ODa7KiK5x61gOuDHuHMTdCK3FGPHftBCRrfOQjuh91M",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NTk0MTUsImV4cCI6MTYxNDUyMzQxNSwibmJmIjoxNjEzNjU5NDE1LCJqdGkiOiJ6aDVWOTZWWGJOdEZ6SFRxIiwic3ViIjoxOTExNDgsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.wAELtYysTcCMg5bF2am6LtOuYJV_BcDpqHsf40tEDag",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NTk2MDAsImV4cCI6MTYxNDUyMzYwMCwibmJmIjoxNjEzNjU5NjAwLCJqdGkiOiJkaW0yNzhQbU45MG91SlpqIiwic3ViIjoyNDY5OTIsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.DuOJbc02WJFrTEk4q6GRptdxJ3isKk9vq8yW3qgULcI",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NTk3MjUsImV4cCI6MTYxNDUyMzcyNSwibmJmIjoxNjEzNjU5NzI1LCJqdGkiOiJ3WTQweEh4ZWpjY3owWkxNIiwic3ViIjoyMzQ1OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.JaFPBX5KdBImPsAIuQVHcbMBBO3UfSdQEI2rUarRMMg",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NTk5NTgsImV4cCI6MTYxNDUyMzk1OCwibmJmIjoxNjEzNjU5OTU4LCJqdGkiOiJmQnc0UmtQdTkzaEIwbUQ5Iiwic3ViIjoyNDY5OTQsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.HP85xhLa6D04jLI6M1ahnWqWqAYllyZx0R7rdLW_tlA",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NjAxMTUsImV4cCI6MTYxNDUyNDExNSwibmJmIjoxNjEzNjYwMTE1LCJqdGkiOiJwQXliU3dNOFF0SWpMNG10Iiwic3ViIjoyNDY5OTcsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.2337kjUU3qMdfKW41PttPIcQbmXNKItDxdmNGQDs6ak",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NjA0NzksImV4cCI6MTYxNDUyNDQ3OSwibmJmIjoxNjEzNjYwNDc5LCJqdGkiOiJyQUhkdzd6bTYyR1lCUWFrIiwic3ViIjoyNjI2MDUsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.kT9QiyYxS4psnR6LpWnyS1buHOGhSlJK0EJxazTnkmY",
+    "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTM2NjA1ODUsImV4cCI6MTYxNDUyNDU4NSwibmJmIjoxNjEzNjYwNTg1LCJqdGkiOiJHWGkzNTVWcWR6d0I3Y3dEIiwic3ViIjoyNjI2MDYsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.oPhqma-zMpc5o65vEwoENPsBIH5_g1DYdJ16G5CtMiU",
 ]
 
 class TelChecker {
@@ -91,6 +90,7 @@ class TelChecker {
 		})
 	}
 
+    //通过APP补卡接口
     async check35Async (telNo, isCheck) {
 		telNo = parseInt (telNo) || 0;
 	
@@ -124,6 +124,72 @@ class TelChecker {
 				if (!error) {
 					try {
 						return resolve (body||{});
+					} catch (e) {
+						return resolve ({});
+					}
+				} else {
+                    logger.log(error)
+					return resolve ({});
+				}
+			})
+		})
+	}
+	
+    UrlEncode(str) {
+        str = (str + '').toString();   
+    
+        return encodeURIComponent(str).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\(/g, '%28').  
+        replace(/\)/g, '%29').replace(/\*/g, '%2A').replace(/%20/g, '+');  
+    }
+
+    //通过 http://www.35.net/web/ 充值接口
+    async check35NewAsync (telNo) {
+	
+		if (!telNo) {
+			return Promise.resolve ({})
+		}
+        var url = "http://www.35.net/web/recharge/rechargeNotLogin.html"
+        //加密:
+        const encrypted = CryptoJS.DES.encrypt(telNo, keyHex, {
+            mode: CryptoJS.mode.ECB,
+            padding: CryptoJS.pad.Pkcs7 //填充方式
+        });
+        
+        //解密:
+        // const decrypted = CryptoJS.TripleDES.decrypt({
+        //     ciphertext: CryptoJS.enc.Base64.parse(data)
+        // }, keyHex, {
+        //     mode: CryptoJS.mode.ECB,
+        //     // padding: CryptoJS.pad.Pkcs7 这地方不用配置，我因为配置结果解密java返回的信息老是报错，看别人的代码加了，解析自已加密的没问题
+        // });
+        // const decryptedData = decrypted.toString(CryptoJS.enc.Utf8);
+        // console.log('解密后的信息：',decryptedData)
+        const rcgMobile = this.UrlEncode(encrypted.toString())
+        // console.log('加密后的手机号：', rcgMobile) 
+
+		return new Promise ((resolve, reject) => {
+
+			request.post (url, {
+				headers : {
+                    'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36",
+                },
+                body:"orderRecharge.rcgMobile=" + rcgMobile + "&orderRecharge.rcgAmt=3QMWx%2BcPxmg%3D",
+                // json: true,
+			},(error, response, body) => {
+				if (!error) {
+					try {
+                        if (-1 < body.indexOf("crmOrderNumber")){
+                            return resolve ({status:"√"});
+                        } else if (-1 < body.indexOf("亲，该号码为临时号码或待审核或预约拆机状态不允许充值！")){
+                            return resolve ({status:"√"});
+                        } else if (-1 < body.indexOf("亲，该号码不是三五通信手机号！")){
+                            console.log("telNo:"+telNo+"===body"+body)
+                            return resolve ({status:"未激活"});
+                        } else {
+                            console.log("异常35号码-telNo:"+telNo)
+                            return resolve ({status:"未激活"});
+                        }
 					} catch (e) {
 						return resolve ({});
 					}
@@ -183,7 +249,6 @@ class TelChecker {
 				if (!error) {
 					try {
                         var info =  iconv.decode(body, 'gb2312');
-console.log(info)
 						return resolve ({ret : info});
 					} catch (e) {
 						return resolve ({});
@@ -196,11 +261,9 @@ console.log(info)
 	}
 	
 	async checkSingle (tel, reqType) {
-        console.log('------checkSingle-----tel:'+tel+"===reqType:"+reqType)
         let info 
         if (reqType == TYPE_35 || reqType == TYPE_35_2) {
             info = await this.check35Async(tel, reqType == TYPE_35_2);
-
             if (typeof info == "string") {//请求总数太多会返回502页面内容
                 info = {tel, message : "Too Many Attempts."}
             }
@@ -210,6 +273,8 @@ console.log(info)
             info = await this.checkHeMaAsync (tel);
         } else if (reqType == TYPE_BEIWEI) {
             info = await this.checkBeiweiAsync (tel);
+        } else if (reqType == TYPE_35_NEW) {
+            info = await this.check35NewAsync(tel)
         }
 		info.tel = tel;
 		return Promise.resolve (info)
@@ -262,6 +327,16 @@ console.log(info)
             if (this.retryTimes == 0) 
                 retdata.push( { mobile, status: "未激活", retry: true })
             retrydata.push(mobile)
+        } else {
+            logger.log('======deal35RetData====失败====:' + mobile)
+            retdata.push({ mobile, ret, status: "失败" })
+        }
+    }
+
+	async deal35NewRetData (ret, retdata) {
+        let mobile = ret.tel
+        if (ret && ret.status) {
+            retdata.push( { mobile, status: ret.status })
         } else {
             logger.log('======deal35RetData====失败====:' + mobile)
             retdata.push({ mobile, ret, status: "失败" })
@@ -336,6 +411,9 @@ console.log(info)
                 this.deal35_2_RetData(ret, retdata, retrydata)
             else if (reqType == TYPE_BEIWEI)
                 this.dealBeiweiRetData(ret, retdata, retrydata)
+            else if (reqType == TYPE_35_NEW)
+                this.deal35NewRetData(ret, retdata, retrydata)
+                
         }
 
         //将重试的结果合并到全局的结果里
@@ -428,6 +506,15 @@ async function getAll35HData (mobiles) {
     })
 }
 
+async function getAll35NewHData (mobiles) {
+    return new Promise ((resolve,reject) => {
+        let chker = new TelChecker ((data) => {
+            resolve (data);
+        })
+        chker.checkBatch(mobiles, TYPE_35_NEW)
+    })
+}
+
 async function getAllHeMaData (mobiles) {
     return new Promise ((resolve,reject) => {
         let chker = new TelChecker ((data) => {
@@ -438,7 +525,6 @@ async function getAllHeMaData (mobiles) {
 }
 
 async function getAllBeiWeiData (mobiles) {
-    console.log('------getAllBeiWeiData-----')
     return new Promise ((resolve,reject) => {
         let chker = new TelChecker ((data) => {
             resolve (data);
@@ -447,12 +533,48 @@ async function getAllBeiWeiData (mobiles) {
     })
 }
 
+//byCharge:走充值接口
+async function get35Data (ctx, byCharge) {
+    let code = ctx.request.body.code || '';
+    let ptype = parseInt(ctx.request.body.ptype || '0');
+    let mobiles = ctx.request.body.mobiles || '';//post
+
+    let set = await database.findAndCheckExpire({code, ptype})
+    if (! (set && set._id)) {
+        ctx.body = {
+            msg: "激活码已过期",
+            ret: 2
+        };
+        return 
+    } else {
+        let data = []
+        let mobilesMap = {}
+        for (let i in mobiles) {
+            data[i] = mobiles[i]
+        }
+        let resData = null
+        if (byCharge) resData = await getAll35NewHData(mobiles)
+        else resData = await getAll35HData(mobiles)
+
+        for (let dt of resData) {
+            mobilesMap[dt.mobile] = dt
+        }
+        let length = data.length
+        for (let i = 0; i<length; i++) {
+            data[i] = mobilesMap[data[i]]
+        }
+        ctx.body = {
+            data,
+            ret: 0
+        };
+    }
+}
+
 //子路由
 let tests = new Router();
 tests
     .get('/', async (ctx) => {
         let mobiles = (ctx.query.mobiles || '').split(',');//get
-        // let data = await postAll(mobiles)
         let data = await getAll35HData(mobiles, 1)
 
         ctx.body = {
@@ -461,40 +583,14 @@ tests
         };
     })
     .post('/', async (ctx) => {
-        let code = ctx.request.body.code || '';
-        let ptype = parseInt(ctx.request.body.ptype || '0');
-        let mobiles = ctx.request.body.mobiles || '';//post
-        logger.log('mobiles--------------')
-
-        let set = await database.findAndCheckExpire({code, ptype})
-        if (! (set && set._id)) {
-            ctx.body = {
-                msg: "激活码已过期",
-                ret: 2
-            };
-            return 
-        } else {
-            // let data = await postAll(mobiles, 1)
-            let data = []
-            let mobilesMap = {}
-            for (let i in mobiles) {
-                mobilesMap[mobiles[i]] = i
-                data[i] = true
-            }
-            let resData = await getAll35HData(mobiles, 1)
-            for (let dt of resData) {
-                let index = mobilesMap[dt.mobile]
-                data[index] = dt
-            }
-
-            ctx.body = {
-                data,
-                ret: 0
-            };
-        }
+        console.log('------charge35-----')
+        await get35Data(ctx, true)
+    })
+    .post('/notcharge', async (ctx) => {
+        console.log('------35-----')
+        await get35Data(ctx)
     })
     .post('/api', async (ctx) => {
-        console.log('------35-----')
         logger.log(ctx.request.body)
         let md5 = ctx.request.body.md5 || '';
         let code = ctx.request.body.code || '';
@@ -532,19 +628,19 @@ tests
             };
             return 
         } else {
-            // let data = await postAllHanghai(mobiles)
             let data = []
             let mobilesMap = {}
             for (let i in mobiles) {
-                mobilesMap[mobiles[i]] = i
-                data[i] = true
+                data[i] = mobiles[i]
             }
             let resData = await getAllHHData(mobiles)
             for (let dt of resData) {
-                let index = mobilesMap[dt.mobile]
-                data[index] = dt
+                mobilesMap[dt.mobile] = dt
             }
-
+            let length = data.length
+            for (let i = 0; i<length; i++) {
+                data[i] = mobilesMap[data[i]]
+            }
             ctx.body = {
                 data,
                 ret: 0
@@ -570,13 +666,15 @@ tests
             let data = []
             let mobilesMap = {}
             for (let i in mobiles) {
-                mobilesMap[mobiles[i]] = i
-                data[i] = true
+                data[i] = mobiles[i]
             }
             let resData = await getAllHeMaData(mobiles)
             for (let dt of resData) {
-                let index = mobilesMap[dt.mobile]
-                data[index] = dt
+                mobilesMap[dt.mobile] = dt
+            }
+            let length = data.length
+            for (let i = 0; i<length; i++) {
+                data[i] = mobilesMap[data[i]]
             }
 
             ctx.body = {
@@ -604,14 +702,19 @@ tests
             let data = []
             let mobilesMap = {}
             for (let i in mobiles) {
-                mobilesMap[mobiles[i]] = i
-                data[i] = true
+                data[i] = mobiles[i]
             }
             let resData = await getAllBeiWeiData(mobiles)
+            console.log('--------beiwei-----end--0-'+data.length)
             for (let dt of resData) {
-                let index = mobilesMap[dt.mobile]
-                data[index] = dt
+                mobilesMap[dt.mobile] = dt
             }
+            console.log('--------beiwei-----end--1-'+data.length)
+            let length = data.length
+            for (let i = 0; i<length; i++) {
+                data[i] = mobilesMap[data[i]]
+            }
+            console.log('--------beiwei-----end---'+data.length)
 
             ctx.body = {
                 data,
