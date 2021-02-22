@@ -27,6 +27,7 @@ const TYPE_HEMA = 2
 const TYPE_35_2 = 3//35出现机主的二次验证
 const TYPE_BEIWEI = 4
 const TYPE_35_NEW = 5//35充值接口
+const TYPE_LANGMA = 6//朗玛
 let delay_between_request = [60000, 5000, 5000, 60000]
 
 let curTokenIdx = 0
@@ -141,7 +142,7 @@ class TelChecker {
         return encodeURIComponent(str).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\(/g, '%28').  
         replace(/\)/g, '%29').replace(/\*/g, '%2A').replace(/%20/g, '+');  
     }
-
+    
     //通过 http://www.35.net/web/ 充值接口
     async check35NewAsync (telNo) {
 	
@@ -224,7 +225,7 @@ class TelChecker {
 			})
 		})
 	}
-
+    
     async checkBeiweiAsync (telNo) {
 
 		telNo = parseInt (telNo) || 0;
@@ -259,6 +260,34 @@ class TelChecker {
 			})
 		})
 	}
+
+    async checkLangmaAsync (telNo) {
+
+		telNo = parseInt (telNo) || 0;
+		if (!telNo) {
+			return Promise.resolve ({})
+		}
+	
+		var url = `https://www.langma.cn//ajax?class=recharge-wx-public.php&is_wx=1&phoneId=${telNo}&cmd=checkPhoneId`;
+
+		return new Promise ((resolve,reject) => {
+
+			request.post (url,{
+				headers : {
+					'User-Agent' : 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+					'content-type': 'application/json;charset=UTF-8',
+				},
+                body : {},
+                json: true,
+			},(error, response, body) => {
+				if (!error) {
+					return resolve ({ret : body});
+				} else {
+					return resolve ({err : error});
+				}
+			})
+		})
+	}
 	
 	async checkSingle (tel, reqType) {
         let info 
@@ -275,6 +304,8 @@ class TelChecker {
             info = await this.checkBeiweiAsync (tel);
         } else if (reqType == TYPE_35_NEW) {
             info = await this.check35NewAsync(tel)
+        } else if (reqType == TYPE_LANGMA) {
+            info = await this.checkLangmaAsync (tel);
         }
 		info.tel = tel;
 		return Promise.resolve (info)
@@ -381,7 +412,7 @@ class TelChecker {
             retdata.push({mobile:info.tel, status : info.ret})
         }
     }
-
+    
 	async dealBeiweiRetData (info, retdata, retrydata) {
         if (info.ret && info.ret.indexOf ('当前号码未开户') >= 0) {
             retdata.push({mobile:info.tel, status : '未激活'})
@@ -391,6 +422,20 @@ class TelChecker {
             retdata.push({mobile:info.tel, status : '√'})
         } else {
             retdata.push({mobile:info.tel, status : '未知情况'})
+        }
+    }
+    
+	async dealLangmaRetData (info, retdata, retrydata) {
+        if (info.ret && info.ret.success && info.ret.data) {
+            if (info.ret.data.tip == '朗玛移动（移动4G制式）'){
+                retdata.push({mobile:info.tel, status : '未激活'})
+            } else if (info.ret.data.tip == '朗玛移动') {
+                retdata.push({mobile:info.tel, status : '√'})
+            } else {
+                retdata.push({mobile:info.tel, status : info.ret.data.tip})
+            }
+        } else {
+            retdata.push({mobile:info.tel, status : '非朗玛号码'})
         }
     }
     
@@ -413,7 +458,8 @@ class TelChecker {
                 this.dealBeiweiRetData(ret, retdata, retrydata)
             else if (reqType == TYPE_35_NEW)
                 this.deal35NewRetData(ret, retdata, retrydata)
-                
+            else if (reqType == TYPE_LANGMA)
+                this.dealLangmaRetData(ret, retdata, retrydata)
         }
 
         //将重试的结果合并到全局的结果里
@@ -570,6 +616,15 @@ async function get35Data (ctx, byCharge) {
     }
 }
 
+async function getAllLangmaData (mobiles) {
+    return new Promise ((resolve,reject) => {
+        let chker = new TelChecker ((data) => {
+            resolve (data);
+        })
+        chker.checkBatch(mobiles, TYPE_LANGMA)
+    })
+}
+
 //子路由
 let tests = new Router();
 tests
@@ -705,16 +760,49 @@ tests
                 data[i] = mobiles[i]
             }
             let resData = await getAllBeiWeiData(mobiles)
-            console.log('--------beiwei-----end--0-'+data.length)
             for (let dt of resData) {
                 mobilesMap[dt.mobile] = dt
             }
-            console.log('--------beiwei-----end--1-'+data.length)
             let length = data.length
             for (let i = 0; i<length; i++) {
                 data[i] = mobilesMap[data[i]]
             }
-            console.log('--------beiwei-----end---'+data.length)
+
+            ctx.body = {
+                data,
+                ret: 0
+            };
+        }
+    })
+
+    .post('/langma', async (ctx) => {
+        console.log('------langma-----')
+        let code = ctx.request.body.code || '';
+        let ptype = parseInt(ctx.request.body.ptype || '0');
+        let mobiles = ctx.request.body.mobiles || '';//post
+        logger.log(mobiles)
+
+        let set = await database.findAndCheckExpire({code, ptype})
+        if (!(set && set._id)) {
+            ctx.body = {
+                msg: "激活码已过期",
+                ret: 2
+            };
+            return 
+        } else {
+            let data = []
+            let mobilesMap = {}
+            for (let i in mobiles) {
+                data[i] = mobiles[i]
+            }
+            let resData = await getAllLangmaData(mobiles)
+            for (let dt of resData) {
+                mobilesMap[dt.mobile] = dt
+            }
+            let length = data.length
+            for (let i = 0; i<length; i++) {
+                data[i] = mobilesMap[data[i]]
+            }
 
             ctx.body = {
                 data,

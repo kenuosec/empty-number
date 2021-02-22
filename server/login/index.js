@@ -25,6 +25,9 @@ login
             }, {
                 value: '4',
                 label: '北纬'
+            }, {
+                value: '6',
+                label: '朗玛'
             }],
             ret:0
         };

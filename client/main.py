@@ -22,9 +22,9 @@ import hashlib
 # global hostUrl, productType, marketUrl, gActiveCode, gCurVersion, gSvrVersion
 # hostUrl = "http://localhost:3000"#测试
 hostUrl = "http://81.71.124.110:3000"#正式
-productType = 0 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手, 5是三五查询助手(补卡接口)
+productType = 6 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手, 5是三五查询助手(补卡接口), 6是朗玛查询助手
 apiType = 1 #0是充值接口， 1是补卡接口
-productNames = ["三五", "海航", "河马", "", "北纬", "三五"]
+productNames = ["三五", "海航", "河马", "", "北纬", "三五", "朗玛"]
 marketUrl = "https://fk.ttm888.net/"
 gActiveCode = ''
 gCurVersion = 1
@@ -131,6 +131,8 @@ class WorkWindow(QMainWindow):
             self.onClickCheck3()
         elif productType == 4:
             self.onClickCheck4()
+        elif productType == 6:
+            self.onClickCheck5()
         else: #0或者5都是35用的
             self.onClickCheck1()
 
@@ -156,6 +158,10 @@ class WorkWindow(QMainWindow):
 
     def onClickCheck4(self):
         url = hostUrl + '/tests/beiwei'
+        self.postCloud(url, self.mobiles, 100)
+
+    def onClickCheck5(self):
+        url = hostUrl + '/tests/langma'
         self.postCloud(url, self.mobiles, 100)
 
     def onClickExport(self):
