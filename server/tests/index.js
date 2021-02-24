@@ -142,7 +142,7 @@ class TelChecker {
         return encodeURIComponent(str).replace(/!/g, '%21').replace(/'/g, '%27').replace(/\(/g, '%28').  
         replace(/\)/g, '%29').replace(/\*/g, '%2A').replace(/%20/g, '+');  
     }
-    
+
     //通过 http://www.35.net/web/ 充值接口
     async check35NewAsync (telNo) {
 	
@@ -180,15 +180,19 @@ class TelChecker {
 			},(error, response, body) => {
 				if (!error) {
 					try {
-                        if (-1 < body.indexOf("crmOrderNumber")){
-                            return resolve ({status:"√"});
-                        } else if (-1 < body.indexOf("亲，该号码为临时号码或待审核或预约拆机状态不允许充值！")){
-                            return resolve ({status:"√"});
-                        } else if (-1 < body.indexOf("亲，该号码不是三五通信手机号！")){
-                            console.log("telNo:"+telNo+"===body"+body)
+                        if (body.length > 1000){
+                            console.log("====35--异常35号码-telNo:"+telNo)
                             return resolve ({status:"未激活"});
+                        } else if (-1 < body.indexOf("crmOrderNumber")){
+                            console.log("====35--crmOrderNumber-telNo:"+telNo)
+                            return resolve ({status:"√"});
+                        // } else if (-1 < body.indexOf("亲，该号码为临时号码或待审核或预约拆机状态不允许充值！")){
+                        //     return resolve ({status:"未激活"});
+                        // } else if (-1 < body.indexOf("亲，该号码不是三五通信手机号！")){
+                        //     console.log("telNo:"+telNo+"===body"+body)
+                        //     return resolve ({status:"未激活"});
                         } else {
-                            console.log("异常35号码-telNo:"+telNo)
+                            console.log("====35-telNo:"+telNo+"==body:"+body)
                             return resolve ({status:"未激活"});
                         }
 					} catch (e) {
@@ -225,7 +229,7 @@ class TelChecker {
 			})
 		})
 	}
-    
+
     async checkBeiweiAsync (telNo) {
 
 		telNo = parseInt (telNo) || 0;
@@ -340,7 +344,10 @@ class TelChecker {
         for(let i = 0; i<length; i++) {
             let index = mobilesMap[this.retdata[i].mobile]
             if (index) {
+                console.log("---mergeRetryData----mobile:"+this.retdata[i].mobile+"---i:"+i+"---index:"+index)
                 this.retdata[i] = retrydata[index]
+            }else{
+                console.log("---mergeRetryData--error--mobile:"+this.retdata[i].mobile+"---i:"+i)
             }
         }
     }
@@ -364,10 +371,14 @@ class TelChecker {
         }
     }
 
-	async deal35NewRetData (ret, retdata) {
+	async deal35NewRetData (ret, retdata, retrydata) {
         let mobile = ret.tel
         if (ret && ret.status) {
-            retdata.push( { mobile, status: ret.status })
+            if (ret.status == "未激活" && this.retryTimes == 0)
+                retrydata.push(mobile)
+
+            if (this.retryTimes == 0) 
+                retdata.push( { mobile, status: ret.status })
         } else {
             logger.log('======deal35RetData====失败====:' + mobile)
             retdata.push({ mobile, ret, status: "失败" })
@@ -381,6 +392,9 @@ class TelChecker {
         } else if (ret.step == "VERIFY_ICCID" && ret.session_id) {
             retdata.push( { mobile, status: "未激活" })
         } else if (ret && ret.message == "Too Many Attempts.") {
+            if (this.retryTimes == 0) 
+                retdata.push( { mobile, status: "未激活" })
+
             retrydata.push(mobile)
         } else {
             console.log('checkSingle-TYPE_35_2-tel:'+ tel+'-message:'+info.message)
@@ -412,7 +426,7 @@ class TelChecker {
             retdata.push({mobile:info.tel, status : info.ret})
         }
     }
-    
+
 	async dealBeiweiRetData (info, retdata, retrydata) {
         if (info.ret && info.ret.indexOf ('当前号码未开户') >= 0) {
             retdata.push({mobile:info.tel, status : '未激活'})
@@ -435,7 +449,7 @@ class TelChecker {
                 retdata.push({mobile:info.tel, status : info.ret.data.tip})
             }
         } else {
-            retdata.push({mobile:info.tel, status : '非朗玛号码'})
+            retdata.push({mobile:info.tel, status : '未激活'})
         }
     }
     
@@ -468,7 +482,11 @@ class TelChecker {
         }
 
         logger.log('======exportData========retrydata.length:' + retrydata.length)
-        if (retrydata.length > 0 && this.retryTimes < 3) {
+        if (retrydata.length > 0 && this.retryTimes == 0 && reqType == TYPE_35_NEW) {
+            this.retryTimes ++
+            await this.delayTime (5000);
+            await this.checkBatch(retrydata, reqType)
+        } else if (retrydata.length > 0 && this.retryTimes < 3 && reqType != TYPE_35_NEW) {
             this.retryTimes ++
             let delay = delay_between_request[reqType]
             await this.delayTime (delay);
@@ -482,6 +500,8 @@ class TelChecker {
             // await this.delayTime (delay);
             await this.checkBatch(this.twice, reqType)
         } else {
+            console.log("======callback======this.retdata")
+            console.log(this.retdata)
             this.callback && this.callback (this.retdata);
         }
 	}
