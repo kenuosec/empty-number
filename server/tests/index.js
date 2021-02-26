@@ -371,20 +371,6 @@ class TelChecker {
         }
     }
 
-	async deal35NewRetData (ret, retdata, retrydata) {
-        let mobile = ret.tel
-        if (ret && ret.status) {
-            if (ret.status == "未激活" && this.retryTimes == 0)
-                retrydata.push(mobile)
-
-            if (this.retryTimes == 0) 
-                retdata.push( { mobile, status: ret.status })
-        } else {
-            logger.log('======deal35RetData====失败====:' + mobile)
-            retdata.push({ mobile, ret, status: "失败" })
-        }
-    }
-
 	async deal35_2_RetData (ret, retdata, retrydata) {
         let mobile = ret.tel
         if (ret.message == "服务密码不正确") {
@@ -398,6 +384,20 @@ class TelChecker {
             retrydata.push(mobile)
         } else {
             console.log('checkSingle-TYPE_35_2-tel:'+ tel+'-message:'+info.message)
+        }
+    }
+
+	async deal35NewRetData (ret, retdata, retrydata) {
+        let mobile = ret.tel
+        if (ret && ret.status) {
+            if (ret.status == "未激活" && this.retryTimes == 0)
+                retrydata.push(mobile)
+
+            if (this.retryTimes == 0) 
+                retdata.push( { mobile, status: ret.status })
+        } else {
+            logger.log('======deal35RetData====失败====:' + mobile)
+            retdata.push({ mobile, ret, status: "失败" })
         }
     }
 

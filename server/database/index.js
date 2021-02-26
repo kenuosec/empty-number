@@ -12,6 +12,7 @@ mongoose.connect("mongodb://localhost/empty_number", dbOptions).then(
     err => { console.error('connect error:', err); }
 );
 const CodesModel = mongoose.model('codes', { code: String, md5: String, expire: Number, ptype: Number, active_time: Number });
+const OrderModel = mongoose.model('order', { order: String, account: Number, face: Number, Porderid: String, state: String, error: String, starttime: String });
 
 let db = {}
 
@@ -46,6 +47,10 @@ db.create = async function(data) {
 
 db.drop = async function() {
     return await CodesModel.remove()
+}
+
+db.createOrder = async function(data) {
+    return await OrderModel.create(data)
 }
 
 module.exports = db
