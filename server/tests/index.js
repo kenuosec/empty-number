@@ -393,11 +393,12 @@ class TelChecker {
             if (ret.status == "未激活" && this.retryTimes == 0)
                 retrydata.push(mobile)
 
-            if (this.retryTimes == 0) 
+            if (this.retryTimes == 0 || ret.status == "√") 
                 retdata.push( { mobile, status: ret.status })
         } else {
             logger.log('======deal35RetData====失败====:' + mobile)
             retdata.push({ mobile, ret, status: "失败" })
+            retrydata.push(mobile)
         }
     }
 
@@ -482,10 +483,17 @@ class TelChecker {
         }
 
         logger.log('======exportData========retrydata.length:' + retrydata.length)
-        if (retrydata.length > 0 && this.retryTimes == 0 && reqType == TYPE_35_NEW) {
-            this.retryTimes ++
-            await this.delayTime (5000);
-            await this.checkBatch(retrydata, reqType)
+        if (reqType == TYPE_35_NEW) {
+            if (retrydata.length > 0 && this.lastRetryLen != retrydata.length && this.retryTimes <= 3){
+                this.lastRetryLen = retrydata.length
+                this.retryTimes ++
+                await this.delayTime (30000);
+                await this.checkBatch(retrydata, reqType)
+            } else {
+                console.log("======callback======this.retdata")
+                console.log(this.retdata)
+                this.callback && this.callback (this.retdata);
+            }
         } else if (retrydata.length > 0 && this.retryTimes < 3 && reqType != TYPE_35_NEW) {
             this.retryTimes ++
             let delay = delay_between_request[reqType]
