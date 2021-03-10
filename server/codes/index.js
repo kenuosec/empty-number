@@ -58,6 +58,7 @@ codes
                     else if (ptype == 2) typeName = "河马"
                     else if (ptype == 4) typeName = "北纬"
                     else if (ptype == 6) typeName = "朗玛"
+                    else if (ptype == 7) typeName = "分享"
                     data.push({code:set[i].code, expire, date, typeName})
                 }
             }

@@ -30,10 +30,5 @@ export default new Router({
             name: 'beiwei',
             component: Beiwei
         },
-        {
-            path: '/test',
-            component: () => import('@/views/newPage'),
-            hidden: true
-        },
     ]
 })

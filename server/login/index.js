@@ -28,6 +28,9 @@ login
             }, {
                 value: '6',
                 label: '朗玛'
+            }, {
+                value: '7',
+                label: '分享'
             }],
             ret:0
         };

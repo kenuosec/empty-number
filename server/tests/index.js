@@ -28,6 +28,7 @@ const TYPE_35_2 = 3//35出现机主的二次验证
 const TYPE_BEIWEI = 4
 const TYPE_35_NEW = 5//35充值接口
 const TYPE_LANGMA = 6//朗玛
+const TYPE_FENXIANG = 7//分享
 let delay_between_request = [60000, 5000, 5000, 60000]
 
 let curTokenIdx = 0
@@ -264,7 +265,7 @@ class TelChecker {
 			})
 		})
 	}
-
+    
     async checkLangmaAsync (telNo) {
 
 		telNo = parseInt (telNo) || 0;
@@ -293,6 +294,30 @@ class TelChecker {
 		})
 	}
 	
+    async checkFenxiangAsync (telNo) {
+		telNo = parseInt (telNo) || 0;
+	
+		if (!telNo) {
+			return Promise.resolve ({})
+		}
+        var url = joinParams(`http://m.10039.cc/zt/select/checkSerialNumberExists`, { serialNumber:telNo });
+		return new Promise ((resolve,reject) => {
+			request.get (url, (error, response, body) => {
+                logger.log(body)
+				if (!error) {
+					try {
+						return resolve (JSON.parse(body));
+					} catch (e) {
+						return resolve ({});
+					}
+				} else {
+                    logger.log(error)
+					return resolve ({});
+				}
+			})
+		})
+	}
+
 	async checkSingle (tel, reqType) {
         let info 
         if (reqType == TYPE_35 || reqType == TYPE_35_2) {
@@ -310,6 +335,8 @@ class TelChecker {
             info = await this.check35NewAsync(tel)
         } else if (reqType == TYPE_LANGMA) {
             info = await this.checkLangmaAsync (tel);
+        } else if (reqType == TYPE_FENXIANG) {
+            info = await this.checkFenxiangAsync (tel);
         }
 		info.tel = tel;
 		return Promise.resolve (info)
@@ -453,6 +480,17 @@ class TelChecker {
             retdata.push({mobile:info.tel, status : '未激活'})
         }
     }
+
+	async dealFenxiangRetData (info, retdata, retrydata) {
+        if (info.respCode == "0000") {
+            retdata.push({mobile:info.tel, status : '√'})
+        } else if (info.respCode == "9999") {
+            retdata.push({mobile:info.tel, status : '未激活'})
+        } else {
+            console.log(info)
+            retdata.push({mobile:info.tel, status : '未激活'})
+        }
+    }
     
 	async exportData (dealingData, reqType) {
         let retdata = this.retdata
@@ -475,6 +513,8 @@ class TelChecker {
                 this.deal35NewRetData(ret, retdata, retrydata)
             else if (reqType == TYPE_LANGMA)
                 this.dealLangmaRetData(ret, retdata, retrydata)
+            else if (reqType == TYPE_FENXIANG)
+                this.dealFenxiangRetData(ret, retdata, retrydata)
         }
 
         //将重试的结果合并到全局的结果里
@@ -645,11 +685,20 @@ async function get35Data (ctx, byCharge) {
 }
 
 async function getAllLangmaData (mobiles) {
-    return new Promise ((resolve,reject) => {
+    return new Promise ((resolve, reject) => {
         let chker = new TelChecker ((data) => {
             resolve (data);
         })
         chker.checkBatch(mobiles, TYPE_LANGMA)
+    })
+}
+
+async function getAllFenxiangData (mobiles) {
+    return new Promise ((resolve, reject) => {
+        let chker = new TelChecker ((data) => {
+            resolve (data);
+        })
+        chker.checkBatch(mobiles, TYPE_FENXIANG)
     })
 }
 
@@ -824,6 +873,42 @@ tests
                 data[i] = mobiles[i]
             }
             let resData = await getAllLangmaData(mobiles)
+            for (let dt of resData) {
+                mobilesMap[dt.mobile] = dt
+            }
+            let length = data.length
+            for (let i = 0; i<length; i++) {
+                data[i] = mobilesMap[data[i]]
+            }
+
+            ctx.body = {
+                data,
+                ret: 0
+            };
+        }
+    })
+
+    .post('/fenxiang', async (ctx) => {
+        console.log('------fenxiang-----')
+        let code = ctx.request.body.code || '';
+        let ptype = parseInt(ctx.request.body.ptype || '0');
+        let mobiles = ctx.request.body.mobiles || '';//post
+        logger.log(mobiles)
+
+        let set = await database.findAndCheckExpire({code, ptype})
+        if (!(set && set._id)) {
+            ctx.body = {
+                msg: "激活码已过期",
+                ret: 2
+            };
+            return 
+        } else {
+            let data = []
+            let mobilesMap = {}
+            for (let i in mobiles) {
+                data[i] = mobiles[i]
+            }
+            let resData = await getAllFenxiangData(mobiles)
             for (let dt of resData) {
                 mobilesMap[dt.mobile] = dt
             }
