@@ -18,17 +18,20 @@ import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QIcon, QStatusTipEvent
 import hashlib
+import threading
+import websocket
 
 # global hostUrl, productType, marketUrl, gActiveCode, gCurVersion, gSvrVersion
-# hostUrl = "http://localhost:3000"#测试
-hostUrl = "http://81.71.124.110:3000"#正式
-productType = 7 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手, 5是三五查询助手(补卡接口), 6是朗玛查询助手, 6是分享查询助手
+hostUrl, is_debug = "http://localhost:3000", True #测试
+# hostUrl, is_debug = "http://81.71.124.110:3000", False #正式
+productType = 7 #0是三五查询助手，1是海航查询助手，2是河马查询助手，4是北纬查询助手, 5是三五查询助手(补卡接口), 6是朗玛查询助手, 7是分享查询助手,8三五待审核查询助手
 apiType = 0 #0是充值接口， 1是补卡接口
-productNames = ["三五", "海航", "河马", "", "北纬", "三五", "朗玛", "分享"]
+productNames = ["三五", "海航", "河马", "", "北纬", "三五", "朗玛", "分享", "三五待审核"]
 marketUrl = "https://fk.ttm888.net/"
 gActiveCode = ''
 gCurVersion = 1
 gSvrVersion = 1
+gSvrUrl = 'ws://localhost:19999'
 class WorkWindow(QMainWindow):
     mobiles = None
     outputDir = None
@@ -135,6 +138,8 @@ class WorkWindow(QMainWindow):
             self.onClickCheck5()
         elif productType == 7:
             self.onClickCheck6()
+        elif productType == 8:
+            self.onClickCheck7()
         else: #0或者5都是35用的
             self.onClickCheck1()
 
@@ -169,6 +174,9 @@ class WorkWindow(QMainWindow):
     def onClickCheck6(self):
         url = hostUrl + '/tests/fenxiang'
         self.postCloud(url, self.mobiles, 100)
+
+    def onClickCheck7(self):
+        self.postSocket(gSvrUrl, self.mobiles)
 
     def onClickExport(self):
         # self.checkdData = self.mobiles
@@ -360,16 +368,13 @@ class WorkWindow(QMainWindow):
         self.enableControls(True)
         pass
 
-    def postAll(self):
+    def postSocket(self, url, mobiles):
+        print("-------postSocket-------")
         try:
-            if self.mode == 1:
-                print('=============>')
-            else:
-                pass
-            authorization = "BearereyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvc3dzenhjeC4zNXN6Lm5ldFwvYXBpXC92MVwvYXV0aFwvbG9naW4iLCJpYXQiOjE2MTA4NTMxMTIsImV4cCI6MTYxMTcxNzExMiwibmJmIjoxNjEwODUzMTEyLCJqdGkiOiJpb2FUaUlXbWJaODJUTVNvIiwic3ViIjoyMjc5OTEsInBydiI6IjIzYmQ1Yzg5NDlmNjAwYWRiMzllNzAxYzQwMDg3MmRiN2E1OTc2ZjcifQ.c1nQrZb0eaifdcq47dVTlxVbkDayqckBDwbO2CdOVhc"
-            r = requests.post(url='https://swszxcx.35sz.net/api/v1/card-replacement/query?mobile=16237397451', data={},
-                        headers={'Content-Type': 'application/json', "Authorization": authorization})
-            print(r.text)
+            self.tSocket = SocketThread(self, url, mobiles)
+            self.tSocket.sinOut.connect(self.postSocketFinish)
+            self.tSocket.sinStep.connect(self.postSocketFinishStep)
+            self.tSocket.start()
         except Exception as err:
             print(err)
         finally:
@@ -389,7 +394,6 @@ class WorkWindow(QMainWindow):
                 msg = self.statusMsg + self.saveMsg 
                 QEvent = QStatusTipEvent(msg)  # 此处为要始终显示的内容
         return super().event(QEvent)
-
 
 class CloudThread(QThread):
     sinOut = pyqtSignal(dict, int)
@@ -514,6 +518,161 @@ class LocalThread(QThread):
                 ret = json.loads(result.text)
                 self.sinOut.emit(ret)
 
+class WebsocketClient(object):
+    """docstring for WebsocketClient"""
+    def __init__(self, address, message_callback=None):
+        super(WebsocketClient, self).__init__()
+        self.address = address
+        self.message_callback = message_callback
+
+    def on_message(self, ws, message):
+        # message = json.loads(message)
+        print("on_client_message:", message)
+        if self.message_callback:
+            self.message_callback(message)
+
+    def on_error(self, ws, error):
+        print("client error:",error)
+
+    def on_close(self, ws):
+        print("### client closed ###")
+        self.ws.close()
+        self.is_running = False
+
+    def on_open(self, ws):
+        self.is_running = True
+        print("on open")
+
+    def close_connect(self):
+        self.ws.close()
+    
+    def send_message(self, message):
+        try:
+            self.ws.send(message)
+        except BaseException as err:
+            pass
+
+    def run(self):
+        websocket.enableTrace(True)
+        self.ws = websocket.WebSocketApp(self.address,
+                              on_message = lambda ws,message: self.on_message(ws, message),
+                              on_error = lambda ws, error: self.on_error(ws, error),
+                              on_close = lambda ws :self.on_close(ws))
+        self.ws.on_open = lambda ws: self.on_open(ws)
+        self.is_running = False
+        while True:
+            print(self.is_running)
+            if not self.is_running:
+                self.ws.run_forever()
+            time.sleep(3)
+
+class SocketThread(QThread):
+    sinOut = pyqtSignal(dict, int)
+    sinStep = pyqtSignal(dict, int)
+
+    def __init__(self, parent, url, mobiles):
+        super(SocketThread, self).__init__(parent)
+        #设置工作状态与初始num数值
+        self.working = True
+        self.url = url
+        self.max = max
+        self.mobiles = mobiles
+
+        self.client = WebsocketClient(self.url, self.onmessage)
+        self.client_thread = threading.Thread(target=self.run_client)
+        self.client_thread.start()
+
+    def run_client(self):
+        self.client.run()
+
+    def __del__(self):
+        #线程状态改变与线程终止
+        self.close()
+        self.working = False
+        self.wait()
+
+    def close(self):
+        if self.client:
+            self.client.close_connect()
+        self.client = None
+
+    async def send_msg(self, message):
+        self.client.send_message(message)
+
+    def onmessage(self, msg):
+        print(f"{msg}")
+
+    def split(self, start=0):
+        print('------split---start-', start)
+        mobiles = []
+        count = len(self.mobiles)
+        for i in range(self.max):
+            if i+start < count:
+                mobiles.append(self.mobiles[i+start])
+
+        return mobiles
+
+    def run(self):
+        start = 0
+        count = len(self.mobiles)
+        finalRet = []
+        # while self.working:
+        while True:
+            mobiles = self.split(start)
+            ret = {"data": []}
+            global gActiveCode
+            try:
+                stringBody = {
+                    "mobiles": mobiles,
+                    "code": gActiveCode,
+                    "ptype": productType,
+                    "atype": apiType,
+                }
+                data = json.dumps(stringBody)
+                HEADERS = {
+                    "Content-Type": "application/json ;charset=utf-8 "
+                }
+                result = requests.post(url=self.url, data=data, headers=HEADERS)
+                ret = json.loads(result.text)
+            except Exception as err:
+                print(err)
+            finally:
+                msg = self.dealError(ret)
+                if msg != '':
+                    fRet = {data:finalRet, "msg": msg, "ret": 1}
+                    self.sinOut.emit(fRet, 0)
+                    return
+
+                if ret['data'] is not None:
+                    for info in ret['data']:
+                        finalRet.append(info)
+
+                if start + self.max < count:
+                    print('-----------ret---------------', ret)
+                    fRet = {"data": finalRet, "ret": 0}
+                    self.sinStep.emit(fRet, start)
+                    start = start+self.max
+                else:
+                    fRet = {"data": finalRet, "ret": 0}
+                    self.sinOut.emit(fRet, 0)
+                    self.working = False
+                    break
+        pass
+
+    def dealError(self, result):
+        msg = ''
+        try:
+            if result['ret'] is not None:
+                if result['ret'] != 0:
+                    if result['msg'] is not None:
+                        msg = result['msg']
+                    else:
+                        msg = "请求错误"
+                pass
+            else:
+                msg = "请求错误"
+        finally:
+            return msg
 
 class LoginWindow(QtWidgets.QMainWindow):
     fileName = "Qt5Quit.dll"
@@ -664,7 +823,7 @@ class LoginWindow(QtWidgets.QMainWindow):
     def onLoginFinish(self, ret):
         print("-------onLoginFinish-------", ret)
         try:
-            if ret['ret'] == 0 or True:
+            if ret['ret'] == 0 or is_debug:
                 code = ret['code']
                 global gActiveCode
                 gActiveCode = code
@@ -724,6 +883,14 @@ class LoginThread(QThread):
         finally:
             pass
 
+    def getSvrUrl(self, ret):
+        try:
+            gSvrUrl = ret['svrurl']
+        except Exception as err:
+            print(err)
+        finally:
+            pass
+
     def run(self):
         ret = -1
         msg = ''
@@ -750,6 +917,7 @@ class LoginThread(QThread):
                 msg = d['msg']
 
             self.getVerver(d)
+            self.getSvrUrl(d)
         except Exception as err:
             print(err)
             msg = '网络错误'
@@ -769,4 +937,5 @@ if __name__ == "__main__":
     work = WorkWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
+
     sys.exit(app.exec_())
